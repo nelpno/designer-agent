@@ -1,4 +1,5 @@
 import json
+import re
 
 from app.agents.base_agent import BaseAgent
 from app.agents.context import PipelineContext, GenerationPrompt
@@ -59,10 +60,14 @@ Guidelines:
             model=settings.LLM_MODEL,
             messages=messages,
             temperature=0.6,
-            response_format={"type": "json_object"},
         )
 
-        prompt_data = json.loads(response)
+        # Strip markdown code blocks if present
+        text = response.strip()
+        if text.startswith("```"):
+            text = re.sub(r'^```(?:json)?\s*', '', text)
+            text = re.sub(r'\s*```\s*$', '', text)
+        prompt_data = json.loads(text)
 
         context.generation_prompt = GenerationPrompt(
             main_prompt=prompt_data["main_prompt"],

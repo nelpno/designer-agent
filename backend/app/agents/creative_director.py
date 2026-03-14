@@ -1,4 +1,5 @@
 import json
+import re
 
 from app.agents.base_agent import BaseAgent
 from app.agents.context import PipelineContext, CreativeDirection
@@ -41,11 +42,14 @@ Consider the brand guidelines if provided. Always output valid JSON only, no mar
             model=settings.LLM_MODEL,
             messages=messages,
             temperature=0.7,
-            response_format={"type": "json_object"},
         )
 
-        # Parse response
-        direction_data = json.loads(response)
+        # Parse response — strip markdown code blocks if present
+        text = response.strip()
+        if text.startswith("```"):
+            text = re.sub(r'^```(?:json)?\s*', '', text)
+            text = re.sub(r'\s*```\s*$', '', text)
+        direction_data = json.loads(text)
 
         context.creative_direction = CreativeDirection(
             mood=direction_data["mood"],

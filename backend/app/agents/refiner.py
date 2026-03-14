@@ -1,4 +1,5 @@
 import json
+import re
 
 from app.agents.base_agent import BaseAgent
 from app.agents.context import PipelineContext, RefinementStep
@@ -50,10 +51,14 @@ class RefinerAgent(BaseAgent):
             model=settings.LLM_MODEL,
             messages=messages,
             temperature=0.7,
-            response_format={"type": "json_object"},
         )
 
-        refinement_data = json.loads(response)
+        # Strip markdown code blocks if present
+        text = response.strip()
+        if text.startswith("```"):
+            text = re.sub(r'^```(?:json)?\s*', '', text)
+            text = re.sub(r'\s*```\s*$', '', text)
+        refinement_data = json.loads(text)
 
         strategy = refinement_data["strategy"]
         improved_prompt = refinement_data["improved_prompt"]

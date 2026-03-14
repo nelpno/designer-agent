@@ -2,6 +2,7 @@ import asyncio
 import base64
 import json
 import os
+import re
 from pathlib import Path
 
 from app.agents.base_agent import BaseAgent
@@ -62,7 +63,12 @@ class ReviewerAgent(BaseAgent):
             temperature=0.3,
         )
 
-        review_data = json.loads(response)
+        # Strip markdown code blocks if present
+        text = response.strip()
+        if text.startswith("```"):
+            text = re.sub(r'^```(?:json)?\s*', '', text)
+            text = re.sub(r'\s*```\s*$', '', text)
+        review_data = json.loads(text)
 
         # Calculate weighted overall score
         composition_score = int(review_data["composition_score"])
