@@ -230,10 +230,8 @@ export default function GenerationDetail() {
 
     if (!isActive) return
 
-    // BUG 3 fix: only poll if WebSocket is not connected
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) return
-
-    const interval = setInterval(fetchGeneration, 5000)
+    // Poll logs and status while pipeline is active (even if WebSocket is connected)
+    const interval = setInterval(fetchGeneration, 3000)
     return () => clearInterval(interval)
   }, [generation?.status, fetchGeneration])
 
