@@ -3,14 +3,17 @@ from __future__ import annotations
 import base64
 import ipaddress
 import json
+import logging
 import re
 import socket
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urljoin
 
 import httpx
 
 from app.config import settings
 from app.providers.openrouter_client import OpenRouterClient
+
+logger = logging.getLogger(__name__)
 
 _PRIVATE_NETWORKS = [
     ipaddress.ip_network("127.0.0.0/8"),
@@ -23,12 +26,20 @@ _PRIVATE_NETWORKS = [
     ipaddress.ip_network("fe80::/10"),
 ]
 
+_ABOUT_PATHS = ["/sobre", "/about", "/about-us", "/quem-somos", "/empresa", "/institucional"]
+
+_SOCIAL_PATTERNS = {
+    "instagram": re.compile(r'https?://(?:www\.)?instagram\.com/([a-zA-Z0-9_.]+)', re.IGNORECASE),
+    "facebook": re.compile(r'https?://(?:www\.)?facebook\.com/([a-zA-Z0-9_.]+)', re.IGNORECASE),
+    "linkedin": re.compile(r'https?://(?:www\.)?linkedin\.com/(?:company|in)/([a-zA-Z0-9_-]+)', re.IGNORECASE),
+}
+
 
 def _validate_url(url: str) -> None:
     """Raise ValueError if the URL is unsafe (non-http/https or pointing at private IPs)."""
     parsed = urlparse(url)
     if parsed.scheme not in ("http", "https"):
-        raise ValueError(f"URL scheme '{parsed.scheme}' is not allowed. Only http and https are permitted.")
+        raise ValueError(f"URL scheme '{parsed.scheme}' is not allowed.")
 
     hostname = parsed.hostname
     if not hostname:
@@ -51,77 +62,157 @@ def _normalize_hex(color: str) -> str | None:
     if not color.startswith("#"):
         color = f"#{color}"
     hex_part = color[1:]
-    # Expand 3-char shorthand (#RGB → #RRGGBB)
     if len(hex_part) == 3 and all(c in "0123456789abcdefABCDEF" for c in hex_part):
         hex_part = "".join(c * 2 for c in hex_part)
-    # Validate 6-char hex
     if len(hex_part) == 6 and all(c in "0123456789abcdefABCDEF" for c in hex_part):
         return f"#{hex_part.upper()}"
     return None
 
 
+def _extract_social_links(html: str) -> dict[str, str]:
+    """Extract social media handles from HTML."""
+    socials = {}
+    for platform, pattern in _SOCIAL_PATTERNS.items():
+        match = pattern.search(html)
+        if match:
+            handle = match.group(1).rstrip("/")
+            if handle not in ("share", "sharer", "dialog", "intent"):
+                socials[platform] = handle
+    return socials
+
+
+def _clean_html(html: str) -> str:
+    """Remove scripts, styles, and HTML tags, keep visible text."""
+    text = re.sub(r'<script[^>]*>.*?</script>', '', html, flags=re.DOTALL)
+    text = re.sub(r'<style[^>]*>.*?</style>', '', text, flags=re.DOTALL)
+    text = re.sub(r'<[^>]+>', ' ', text)
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text
+
+
+async def _fetch_page(http: httpx.AsyncClient, url: str) -> str | None:
+    """Fetch a page, return text or None on failure."""
+    try:
+        resp = await http.get(url, timeout=10.0)
+        if resp.status_code == 200:
+            return resp.text
+    except Exception:
+        pass
+    return None
+
+
+async def _gather_extra_context(http: httpx.AsyncClient, website_url: str, html_content: str) -> str:
+    """Gather additional context from about pages, Instagram, etc."""
+    parsed = urlparse(website_url)
+    base_url = f"{parsed.scheme}://{parsed.netloc}"
+    extra_parts = []
+
+    # 1. Try about/sobre pages
+    for path in _ABOUT_PATHS:
+        about_html = await _fetch_page(http, urljoin(base_url, path))
+        if about_html and len(about_html) > 500:
+            about_text = _clean_html(about_html)[:3000]
+            extra_parts.append(f"## Página {path}\n{about_text}")
+            logger.info(f"Found about page: {path}")
+            break  # Only use the first one found
+
+    # 2. Extract and fetch social media
+    socials = _extract_social_links(html_content)
+
+    if "instagram" in socials:
+        handle = socials["instagram"]
+        ig_html = await _fetch_page(http, f"https://www.instagram.com/{handle}/")
+        if ig_html:
+            # Extract meta description (Instagram puts bio there)
+            bio_match = re.search(
+                r'<meta\s+(?:property="og:description"|name="description")\s+content="([^"]*)"',
+                ig_html, re.IGNORECASE,
+            )
+            bio = bio_match.group(1) if bio_match else ""
+            # Extract follower count from meta
+            followers_match = re.search(r'([\d,.]+[KMkm]?)\s*(?:Followers|seguidores)', ig_html, re.IGNORECASE)
+            followers = followers_match.group(1) if followers_match else "N/A"
+            extra_parts.append(
+                f"## Instagram @{handle}\n"
+                f"Bio: {bio}\n"
+                f"Seguidores: {followers}"
+            )
+            logger.info(f"Found Instagram: @{handle}")
+
+    if "facebook" in socials:
+        extra_parts.append(f"## Facebook: /{socials['facebook']}")
+
+    if "linkedin" in socials:
+        extra_parts.append(f"## LinkedIn: /{socials['linkedin']}")
+
+    # Add social handles summary
+    if socials:
+        extra_parts.append(f"## Redes Sociais encontradas: {', '.join(f'{k}: @{v}' for k, v in socials.items())}")
+
+    return "\n\n".join(extra_parts)
+
+
 async def discover_brand_from_url(website_url: str, logo_base64: str | None = None) -> dict:
     """
-    Fetch a website and use AI to extract brand guidelines.
+    Fetch a website, about pages, and social media profiles to extract brand guidelines.
     Optionally analyzes the brand logo for accurate color extraction.
-    Returns a dict with brand data that can be used to create/update a Brand.
     """
-    # Auto-add https:// if no scheme provided
     if not website_url.startswith(("http://", "https://")):
         website_url = f"https://{website_url}"
 
-    # Validate URL to prevent SSRF
     _validate_url(website_url)
 
-    # Step 1: Fetch the website HTML
-    async with httpx.AsyncClient(follow_redirects=True, timeout=30.0, verify=False) as http:
+    async with httpx.AsyncClient(
+        follow_redirects=True,
+        timeout=30.0,
+        verify=False,
+        headers={"User-Agent": "Mozilla/5.0 (compatible; DesignerAgent/1.0)"},
+    ) as http:
+        # Step 1: Fetch main page
         response = await http.get(website_url)
         response.raise_for_status()
         html_content = response.text
 
-    # Step 2: Clean HTML — remove script and style tags but keep visible content
-    cleaned = re.sub(r'<script[^>]*>.*?</script>', '', html_content, flags=re.DOTALL)
-    cleaned = re.sub(r'<style[^>]*>.*?</style>', '', cleaned, flags=re.DOTALL)
-    cleaned = cleaned[:15000]
+        # Step 2: Gather extra context (about pages, Instagram, etc.)
+        extra_context = await _gather_extra_context(http, website_url, html_content)
 
-    # Extract CSS hex colors from raw HTML for context
+    # Step 3: Extract structured data from HTML
+    cleaned = _clean_html(html_content)[:8000]
+
     css_colors = re.findall(r'#[0-9a-fA-F]{6}', html_content)
     css_colors = list(set(css_colors))[:20]
 
-    # Extract inline styles for better color context
     style_blocks = re.findall(r'<style[^>]*>(.*?)</style>', html_content, re.DOTALL)
     style_text = "\n".join(style_blocks)[:5000]
 
-    # Extract meta description
     meta_description = ""
     meta_match = re.search(
         r'<meta[^>]*name=["\']description["\'][^>]*content=["\'](.*?)["\']',
-        html_content,
-        re.IGNORECASE,
+        html_content, re.IGNORECASE,
     )
     if meta_match:
         meta_description = meta_match.group(1)
 
-    # Extract page title
     title = ""
     title_match = re.search(r'<title>(.*?)</title>', html_content, re.IGNORECASE)
     if title_match:
         title = title_match.group(1)
 
-    # Extract Google Fonts
     font_links = re.findall(r'fonts\.googleapis\.com/css2?\?family=([^"&]+)', html_content)
     font_families = re.findall(r'font-family:\s*["\']?([^"\';\}]+)', style_text)
 
-    # Step 3: Use LLM to analyze (with vision if logo provided)
+    socials = _extract_social_links(html_content)
+
+    # Step 4: Use LLM to analyze
     client = OpenRouterClient()
     try:
-        system_prompt = """Você é um Analista de Marca especialista. Dado o conteúdo de um website, extraia as diretrizes visuais da marca.
+        system_prompt = """Você é um Analista de Marca especialista. Analise TODAS as informações fornecidas (site, redes sociais, páginas sobre) para extrair diretrizes visuais da marca.
 
 IMPORTANTE — Foco na IDENTIDADE VISUAL da marca:
-- As cores primárias são as cores do LOGO e elementos principais da marca (cabeçalhos, botões de CTA, links principais), NÃO cores decorativas do site.
+- As cores primárias são as cores do LOGO e elementos principais da marca (cabeçalhos, botões de CTA, links), NÃO cores decorativas.
 - Se uma imagem de logo foi fornecida, analise-a para extrair as cores REAIS da marca.
 - Cores de fundo (#FFFFFF, #000000, #F5F5F5) geralmente são secundárias, não primárias.
-- Ignore cores de ícones genéricos, redes sociais, ou elementos não relacionados à marca.
+- Use informações do Instagram e página sobre para entender melhor o tom de voz e posicionamento.
 
 Output JSON (TODOS os textos em Português Brasileiro):
 {
@@ -148,15 +239,18 @@ REGRAS CRÍTICAS:
 URL: {website_url}
 Título: {title}
 Meta Description: {meta_description}
-Cores CSS encontradas no site: {', '.join(css_colors[:15])}
-Fontes Google encontradas: {', '.join(font_links[:5]) if font_links else 'nenhuma'}
-Fontes CSS encontradas: {', '.join(list(set(font_families))[:5]) if font_families else 'nenhuma'}
+Redes Sociais: {', '.join(f'{k}: @{v}' for k, v in socials.items()) if socials else 'nenhuma encontrada'}
+Cores CSS encontradas: {', '.join(css_colors[:15])}
+Fontes Google: {', '.join(font_links[:5]) if font_links else 'nenhuma'}
+Fontes CSS: {', '.join(list(set(font_families))[:5]) if font_families else 'nenhuma'}
 
-HTML (limpo):
-{cleaned[:8000]}"""
+Conteúdo do site:
+{cleaned[:6000]}"""
+
+        if extra_context:
+            user_prompt += f"\n\n## Informações Adicionais (páginas sobre, redes sociais)\n{extra_context[:3000]}"
 
         if logo_base64:
-            # Use vision to analyze the logo
             response_text = await client.chat_with_vision(
                 model=settings.LLM_MODEL,
                 messages=[
