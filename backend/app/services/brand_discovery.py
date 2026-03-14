@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import ipaddress
 import json
 import re
@@ -44,9 +45,25 @@ def _validate_url(url: str) -> None:
             raise ValueError(f"Requests to private/internal IP addresses are not allowed (resolved: {resolved_ip}).")
 
 
-async def discover_brand_from_url(website_url: str) -> dict:
+def _normalize_hex(color: str) -> str | None:
+    """Normalize a hex color to #RRGGBB format. Returns None if invalid."""
+    color = color.strip()
+    if not color.startswith("#"):
+        color = f"#{color}"
+    hex_part = color[1:]
+    # Expand 3-char shorthand (#RGB → #RRGGBB)
+    if len(hex_part) == 3 and all(c in "0123456789abcdefABCDEF" for c in hex_part):
+        hex_part = "".join(c * 2 for c in hex_part)
+    # Validate 6-char hex
+    if len(hex_part) == 6 and all(c in "0123456789abcdefABCDEF" for c in hex_part):
+        return f"#{hex_part.upper()}"
+    return None
+
+
+async def discover_brand_from_url(website_url: str, logo_base64: str | None = None) -> dict:
     """
     Fetch a website and use AI to extract brand guidelines.
+    Optionally analyzes the brand logo for accurate color extraction.
     Returns a dict with brand data that can be used to create/update a Brand.
     """
     # Auto-add https:// if no scheme provided
@@ -65,12 +82,15 @@ async def discover_brand_from_url(website_url: str) -> dict:
     # Step 2: Clean HTML — remove script and style tags but keep visible content
     cleaned = re.sub(r'<script[^>]*>.*?</script>', '', html_content, flags=re.DOTALL)
     cleaned = re.sub(r'<style[^>]*>.*?</style>', '', cleaned, flags=re.DOTALL)
-    # Keep only first 15000 chars to fit in context
     cleaned = cleaned[:15000]
 
     # Extract CSS hex colors from raw HTML for context
-    css_colors = re.findall(r'#[0-9a-fA-F]{3,8}', html_content)
-    css_colors = list(set(css_colors))[:20]  # deduplicate, limit
+    css_colors = re.findall(r'#[0-9a-fA-F]{6}', html_content)
+    css_colors = list(set(css_colors))[:20]
+
+    # Extract inline styles for better color context
+    style_blocks = re.findall(r'<style[^>]*>(.*?)</style>', html_content, re.DOTALL)
+    style_text = "\n".join(style_blocks)[:5000]
 
     # Extract meta description
     meta_description = ""
@@ -88,61 +108,91 @@ async def discover_brand_from_url(website_url: str) -> dict:
     if title_match:
         title = title_match.group(1)
 
-    # Step 3: Use LLM to analyze
+    # Extract Google Fonts
+    font_links = re.findall(r'fonts\.googleapis\.com/css2?\?family=([^"&]+)', html_content)
+    font_families = re.findall(r'font-family:\s*["\']?([^"\';\}]+)', style_text)
+
+    # Step 3: Use LLM to analyze (with vision if logo provided)
     client = OpenRouterClient()
     try:
-        system_prompt = """You are a Brand Analyst. Given a website's HTML content, extract brand guidelines.
+        system_prompt = """Você é um Analista de Marca especialista. Dado o conteúdo de um website, extraia as diretrizes visuais da marca.
 
-Analyze the visual identity, tone of voice, and overall brand positioning.
+IMPORTANTE — Foco na IDENTIDADE VISUAL da marca:
+- As cores primárias são as cores do LOGO e elementos principais da marca (cabeçalhos, botões de CTA, links principais), NÃO cores decorativas do site.
+- Se uma imagem de logo foi fornecida, analise-a para extrair as cores REAIS da marca.
+- Cores de fundo (#FFFFFF, #000000, #F5F5F5) geralmente são secundárias, não primárias.
+- Ignore cores de ícones genéricos, redes sociais, ou elementos não relacionados à marca.
 
-Output JSON:
+Output JSON (TODOS os textos em Português Brasileiro):
 {
-    "name": "Brand name extracted from the site",
-    "primary_colors": ["#hex1", "#hex2", "#hex3"],
-    "secondary_colors": ["#hex1", "#hex2"],
-    "fonts": {"heading": "font name", "body": "font name"},
-    "tone_of_voice": "Description of the brand's communication style",
-    "do_rules": ["design principles to follow"],
-    "dont_rules": ["things to avoid"],
-    "style_summary": "Brief description of visual style (e.g., minimalist, bold, corporate)",
-    "industry": "What industry/sector the brand is in",
-    "target_audience": "Who the brand targets"
+    "name": "Nome da marca",
+    "primary_colors": ["#RRGGBB", "#RRGGBB"],
+    "secondary_colors": ["#RRGGBB"],
+    "fonts": {"heading": "nome da fonte", "body": "nome da fonte"},
+    "tone_of_voice": "Descrição do tom de comunicação da marca EM PORTUGUÊS",
+    "do_rules": ["regras de design a seguir EM PORTUGUÊS"],
+    "dont_rules": ["coisas a evitar EM PORTUGUÊS"],
+    "style_summary": "Descrição breve do estilo visual EM PORTUGUÊS",
+    "industry": "Setor/indústria da marca",
+    "target_audience": "Público-alvo da marca"
 }
 
-Look for:
-- Colors: CSS colors, brand colors in the design
-- Fonts: Google Fonts links, font-family CSS declarations
-- Tone: The language used, formal vs casual, etc.
-- Style: Minimalist, corporate, playful, luxurious, etc.
+REGRAS CRÍTICAS:
+- TODAS as cores devem ser HEX de 6 dígitos (#RRGGBB), nunca 3 dígitos ou incompletos
+- Se o logo foi fornecido como imagem, as cores do logo TÊM PRIORIDADE sobre as cores CSS
+- Tom de voz e regras DEVEM ser em Português Brasileiro
+- Output válido JSON apenas, sem markdown."""
 
-Output valid JSON only."""
-
-        user_prompt = f"""Analyze this website and extract brand guidelines.
+        user_prompt = f"""Analise este website e extraia as diretrizes de marca.
 
 URL: {website_url}
-Title: {title}
+Título: {title}
 Meta Description: {meta_description}
-CSS Colors Found: {', '.join(css_colors[:10])}
+Cores CSS encontradas no site: {', '.join(css_colors[:15])}
+Fontes Google encontradas: {', '.join(font_links[:5]) if font_links else 'nenhuma'}
+Fontes CSS encontradas: {', '.join(list(set(font_families))[:5]) if font_families else 'nenhuma'}
 
-HTML Content (cleaned):
-{cleaned[:10000]}"""
+HTML (limpo):
+{cleaned[:8000]}"""
 
-        response_text = await client.chat(
-            model=settings.LLM_MODEL,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
-            temperature=0.3,
-        )
+        if logo_base64:
+            # Use vision to analyze the logo
+            response_text = await client.chat_with_vision(
+                model=settings.LLM_MODEL,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt + "\n\nA imagem abaixo é o LOGO da marca. Analise as cores e elementos visuais do logo para determinar as cores primárias da marca."},
+                ],
+                image_base64=logo_base64,
+                temperature=0.3,
+            )
+        else:
+            response_text = await client.chat(
+                model=settings.LLM_MODEL,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                temperature=0.3,
+            )
 
-        # Extract JSON from response (may be wrapped in markdown code blocks)
+        # Extract JSON from response
         text = response_text.strip()
         if text.startswith("```"):
             text = re.sub(r'^```(?:json)?\s*', '', text)
             text = re.sub(r'\s*```$', '', text)
 
         brand_data = json.loads(text)
+
+        # Validate and normalize hex colors
+        for field in ("primary_colors", "secondary_colors"):
+            if field in brand_data and isinstance(brand_data[field], list):
+                brand_data[field] = [
+                    normalized
+                    for c in brand_data[field]
+                    if (normalized := _normalize_hex(c)) is not None
+                ]
+
         return brand_data
     finally:
         await client.close()

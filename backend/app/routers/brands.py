@@ -35,13 +35,16 @@ async def list_brands(
 @router.post("/discover")
 async def discover_brand(
     website_url: str,
+    body: dict | None = None,
     session: AsyncSession = Depends(get_session),
 ) -> dict:
-    """Auto-discover brand guidelines from a website URL. Returns data for review before creating."""
+    """Auto-discover brand guidelines from a website URL. Optionally receives logo as base64 for color analysis."""
     from app.services.brand_discovery import discover_brand_from_url
 
+    logo_base64 = (body or {}).get("logo_base64") if body else None
+
     try:
-        brand_data = await discover_brand_from_url(website_url)
+        brand_data = await discover_brand_from_url(website_url, logo_base64=logo_base64)
         return {"discovered": brand_data, "message": "Brand data discovered. Review and create the brand."}
     except httpx.HTTPError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Could not fetch website: {str(e)}")

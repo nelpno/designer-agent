@@ -226,8 +226,16 @@ function BrandModal({
     try {
       setDiscovering(true)
       setDiscoverError(null)
+      // Extract base64 from logo data URL if available
+      let logoB64: string | null = null
+      if (form.logo_url && form.logo_url.startsWith('data:')) {
+        const commaIdx = form.logo_url.indexOf(',')
+        if (commaIdx > 0) logoB64 = form.logo_url.slice(commaIdx + 1)
+      }
+      const params = new URLSearchParams({ website_url: form.website_url })
       const res = await apiClient.post<Record<string, unknown>>(
-        `/api/brands/discover?website_url=${encodeURIComponent(form.website_url)}`
+        `/api/brands/discover?${params}`,
+        logoB64 ? { logo_base64: logoB64 } : undefined
       )
       const data = (res.data as Record<string, unknown>).discovered as Record<string, unknown> ?? res.data
       // Pre-fill fields from discovery
