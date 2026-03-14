@@ -158,10 +158,10 @@ async def retry_generation(
     generation = result.scalar_one_or_none()
     if not generation:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Generation not found")
-    if generation.status not in ("failed", "completed"):
+    if generation.status not in ("failed", "completed", "running", "pending"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Can only retry failed or completed generations",
+            detail="Cannot retry this generation",
         )
 
     # Reset and re-dispatch
