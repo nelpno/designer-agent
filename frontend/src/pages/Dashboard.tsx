@@ -193,7 +193,7 @@ export default function Dashboard() {
   }, [])
 
   return (
-    <div className="p-8 lg:p-10">
+    <div className="p-4 sm:p-8 lg:p-10">
       {/* Greeting + CTA */}
       <div className="mb-8 animate-fade-in">
         <h1
@@ -253,7 +253,7 @@ export default function Dashboard() {
       )}
 
       {/* Stats Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-8">
         <StatCard
           label="Gerações"
           value={stats?.total_generations ?? generations.length}

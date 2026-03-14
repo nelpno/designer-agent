@@ -83,15 +83,17 @@ export default function Layout({ children }: LayoutProps) {
   }, [location.pathname])
 
   function themeIcon() {
-    if (theme === 'dark') return <MoonIcon />
-    if (theme === 'light') return <SunIcon />
-    return <MonitorIcon />
+    // Show icon representing what the NEXT click will switch to
+    if (theme === 'dark') return <SunIcon />
+    if (theme === 'light') return <MonitorIcon />
+    return <MoonIcon />
   }
 
   function themeLabel() {
-    if (theme === 'dark') return 'Escuro'
-    if (theme === 'light') return 'Claro'
-    return 'Sistema'
+    // Show label representing what the NEXT click will switch to
+    if (theme === 'dark') return 'Claro'
+    if (theme === 'light') return 'Sistema'
+    return 'Escuro'
   }
 
   return (
@@ -140,7 +142,7 @@ export default function Layout({ children }: LayoutProps) {
           </div>
           {/* Close button on mobile */}
           <button
-            className="lg:hidden p-1 rounded-lg transition-colors"
+            className="lg:hidden p-2.5 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
             style={{ color: 'var(--text-secondary)' }}
             onClick={() => setSidebarOpen(false)}
           >
@@ -235,7 +237,7 @@ export default function Layout({ children }: LayoutProps) {
           }}
         >
           <button
-            className="p-2 rounded-lg transition-colors"
+            className="p-2.5 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
             style={{ color: 'var(--text-secondary)' }}
             onClick={() => setSidebarOpen(true)}
           >

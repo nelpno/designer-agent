@@ -454,7 +454,7 @@ export default function NewBrief() {
                   >
                     Tipo de Arte
                   </label>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {ART_TYPES.map((t) => {
                       const isSelected = form.art_type === t.value
                       return (

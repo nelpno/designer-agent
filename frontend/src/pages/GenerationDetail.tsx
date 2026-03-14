@@ -3,8 +3,22 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { apiClient, createWebSocket, storageUrl } from '../api/client'
 import { Generation, GeneratedImage, GenerationStatus, PipelineLog } from '../types'
 import StatusBadge from '../components/StatusBadge'
-import ScoreBadge from '../components/ScoreBadge'
 import ModelBadge from '../components/ModelBadge'
+
+function formatAgentName(name?: string): string {
+  if (!name) return ''
+  return name
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+}
+
+function formatDuration(ms: number): string {
+  const totalSeconds = Math.round(ms / 1000)
+  if (totalSeconds < 60) return `${totalSeconds}s`
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = totalSeconds % 60
+  return seconds > 0 ? `${minutes}min ${seconds}s` : `${minutes}min`
+}
 
 interface DecisionLogEntry {
   agent?: string
@@ -113,7 +127,7 @@ function PipelineTrace({ logs, pipelineContext }: { logs: PipelineLog[]; pipelin
                       {stepAgentIcon(step.agent ?? step.step)}
                     </span>
                     <span className="text-sm font-semibold truncate" style={{ fontFamily: 'var(--font-heading)', color: 'var(--text-primary)' }}>
-                      {step.agent ?? step.step ?? `Etapa ${idx + 1}`}
+                      {formatAgentName(step.agent) || formatAgentName(step.step) || `Etapa ${idx + 1}`}
                     </span>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
@@ -304,10 +318,10 @@ export default function GenerationDetail() {
   return (
     <div className="p-6 lg:p-8 max-w-[1400px] mx-auto">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6 animate-fade-in">
+      <div className="flex flex-wrap items-center gap-4 mb-6 animate-fade-in">
         <button
           onClick={() => navigate(-1)}
-          className="p-2 rounded-xl transition-all"
+          className="p-3 -ml-1 rounded-xl transition-all min-w-[44px] min-h-[44px] flex items-center justify-center"
           style={{ color: 'var(--text-secondary)' }}
           onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-tertiary)'; e.currentTarget.style.color = 'var(--text-primary)' }}
           onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)' }}
@@ -396,7 +410,7 @@ export default function GenerationDetail() {
       )}
 
       {loading ? (
-        <div className="flex gap-6">
+        <div className="flex flex-col lg:flex-row gap-6">
           <div className="flex-[3] artisan-card-static rounded-xl aspect-square animate-pulse" />
           <div className="flex-[2] space-y-4">
             <div className="h-8 artisan-card-static rounded-xl animate-pulse" />
@@ -413,19 +427,25 @@ export default function GenerationDetail() {
           {/* Left: Image preview */}
           <div className="flex-[3] space-y-4 animate-slide-up">
             {/* Main image */}
-            <div className="artisan-card-static overflow-hidden rounded-2xl">
+            <div
+              className="overflow-hidden rounded-2xl"
+              style={{
+                border: '1px solid var(--border)',
+                background: 'var(--bg-secondary)',
+              }}
+            >
               <div className="relative">
                 {currentImage ? (
                   <img
                     src={storageUrl(currentImage.image_url)}
                     alt="Design gerado"
-                    className="w-full object-contain max-h-[600px]"
+                    className="w-full object-contain max-h-[75vh]"
                   />
                 ) : generation.final_image_url ? (
                   <img
                     src={storageUrl(generation.final_image_url)}
                     alt="Design gerado"
-                    className="w-full object-contain max-h-[600px]"
+                    className="w-full object-contain max-h-[75vh]"
                   />
                 ) : generation.status === GenerationStatus.PENDING ||
                   generation.status === GenerationStatus.PROCESSING ? (
@@ -528,9 +548,32 @@ export default function GenerationDetail() {
                   </div>
                 )}
                 {generation.final_score != null && (
-                  <div className="flex items-center justify-between">
-                    <dt className="text-sm" style={{ color: 'var(--text-secondary)' }}>Score</dt>
-                    <dd><ScoreBadge score={generation.final_score} /></dd>
+                  <div
+                    className="flex items-center justify-between rounded-xl px-3 py-2.5 -mx-1"
+                    style={{
+                      background: generation.final_score >= 75
+                        ? 'rgba(48, 209, 88, 0.06)'
+                        : generation.final_score >= 50
+                        ? 'rgba(255, 214, 10, 0.06)'
+                        : 'rgba(255, 69, 58, 0.06)',
+                      boxShadow: generation.final_score >= 75
+                        ? '0 0 20px rgba(48, 209, 88, 0.08)'
+                        : generation.final_score >= 50
+                        ? '0 0 20px rgba(255, 214, 10, 0.08)'
+                        : '0 0 20px rgba(255, 69, 58, 0.08)',
+                    }}
+                  >
+                    <dt className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Score</dt>
+                    <dd className="text-xl font-bold" style={{
+                      fontFamily: 'var(--font-heading)',
+                      color: generation.final_score >= 75
+                        ? '#30D158'
+                        : generation.final_score >= 50
+                        ? '#FFD60A'
+                        : '#FF453A',
+                    }}>
+                      {generation.final_score.toFixed(0)}
+                    </dd>
                   </div>
                 )}
                 {generation.iterations_used > 0 && (
@@ -543,7 +586,7 @@ export default function GenerationDetail() {
                   <div className="flex items-center justify-between">
                     <dt className="text-sm" style={{ color: 'var(--text-secondary)' }}>Duração</dt>
                     <dd className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-                      {(generation.total_duration_ms / 1000).toFixed(1)}s
+                      {formatDuration(generation.total_duration_ms)}
                     </dd>
                   </div>
                 )}
@@ -607,27 +650,6 @@ export default function GenerationDetail() {
               </div>
             )}
 
-            {/* Raw logs */}
-            {logs.length > 0 && (
-              <div className="artisan-card-static p-5 rounded-2xl">
-                <h3 className="font-semibold text-sm mb-3" style={{ fontFamily: 'var(--font-heading)', color: 'var(--text-primary)' }}>
-                  Logs
-                  <span className="ml-2 text-xs font-normal" style={{ color: 'var(--text-tertiary)' }}>({logs.length})</span>
-                </h3>
-                <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
-                  {logs.map((log) => (
-                    <div key={log.id} className="flex items-start gap-2 py-1">
-                      <span className="text-xs flex-shrink-0 font-medium" style={{ color: 'var(--accent-primary)', opacity: 0.6 }}>
-                        {log.agent_name}
-                      </span>
-                      {log.decision && (
-                        <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{log.decision}</span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         </div>
       )}
