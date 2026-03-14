@@ -47,6 +47,10 @@ class Settings(BaseSettings):
     APP_PORT: int = 8000
     FRONTEND_URL: str = "http://localhost:5173"
 
+    # Security
+    API_SECRET_KEY: Optional[str] = None
+    DEBUG: bool = False
+
 
 settings = Settings()
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -97,8 +97,8 @@ async def start_generation(
 
 @router.get("/", response_model=list[GenerationResponse])
 async def list_generations(
-    skip: int = 0,
-    limit: int = 20,
+    skip: int = Query(default=0, ge=0, le=10000),
+    limit: int = Query(default=20, ge=1, le=100),
     session: AsyncSession = Depends(get_session),
 ) -> list[GenerationResponse]:
     result = await session.execute(

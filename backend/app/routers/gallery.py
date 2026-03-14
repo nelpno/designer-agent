@@ -8,8 +8,8 @@ router = APIRouter(prefix="/api/gallery", tags=["gallery"])
 
 @router.get("/")
 async def get_gallery(
-    skip: int = 0,
-    limit: int = 50,
+    skip: int = Query(default=0, ge=0, le=10000),
+    limit: int = Query(default=50, ge=1, le=100),
     art_type: str | None = None,
     model_used: str | None = None,
     min_score: int | None = None,

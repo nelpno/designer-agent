@@ -1,8 +1,10 @@
+import os
 from contextlib import asynccontextmanager
 from collections.abc import AsyncGenerator
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.config import settings
 from app.database import init_db
@@ -18,49 +20,64 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 app = FastAPI(
     title="Designer Agent API",
-    description="""
-## API de Geração de Artes Estáticas com IA
-
-Pipeline de 5 agentes inteligentes que gera artes profissionais automaticamente.
-
-### Pipeline de Agentes
-1. **Creative Director** — interpreta o brief e define direção criativa
-2. **Prompt Engineer** — traduz a direção em prompts otimizados
-3. **Generator** — gera a imagem via OpenRouter (Nano Banana Pro, FLUX.2, etc.)
-4. **Reviewer** — avalia qualidade com vision AI (score 0-100)
-5. **Refiner** — corrige problemas e refina (loop automático)
-
-### Fluxo básico via API
-```
-POST /api/brands → criar marca (ou POST /api/brands/discover-and-create)
-POST /api/briefs → criar brief com detalhes da arte
-POST /api/generations/from-brief/{brief_id} → iniciar geração
-GET  /api/generations/{id} → acompanhar status e resultado
-WS   /ws/generation/{id} → updates em tempo real
-```
-
-### Modelos de Imagem Disponíveis
-- **Nano Banana Pro** (google/gemini-3-pro-image-preview) — melhor texto em imagens
-- **Nano Banana 2** (google/gemini-3.1-flash-image-preview) — rápido
-- **FLUX.2 Pro** (black-forest-labs/flux.2-pro) — fotorrealismo
-- **FLUX.2 Flex** (black-forest-labs/flux.2-flex) — flexível
-""",
-    version="0.1.0",
+    description="API de Geração de Artes Estáticas com IA",
+    version="1.1.0",
     lifespan=lifespan,
-    docs_url="/docs",
-    redoc_url="/redoc",
-    openapi_url="/openapi.json",
+    docs_url="/docs" if settings.DEBUG else None,
+    redoc_url="/redoc" if settings.DEBUG else None,
+    openapi_url="/openapi.json" if settings.DEBUG else None,
 )
+
+# --- Security Middlewares ---
+
+# 1. Request body size limit (15MB max)
+MAX_BODY_SIZE = 15 * 1024 * 1024
+
+@app.middleware("http")
+async def limit_request_body(request: Request, call_next):
+    content_length = request.headers.get("content-length")
+    if content_length and int(content_length) > MAX_BODY_SIZE:
+        return JSONResponse(status_code=413, content={"detail": "Request body too large (max 15MB)"})
+    return await call_next(request)
+
+
+# 2. API Key authentication
+@app.middleware("http")
+async def require_api_key(request: Request, call_next):
+    # Skip auth if no key configured (dev mode) or for health/storage/docs
+    if not settings.API_SECRET_KEY:
+        return await call_next(request)
+
+    path = request.url.path
+    # Public paths that don't need auth
+    if path in ("/health", "/docs", "/redoc", "/openapi.json") or path.startswith("/storage/"):
+        return await call_next(request)
+
+    # All /api and /ws paths require auth
+    if path.startswith("/api") or path.startswith("/ws"):
+        key = request.headers.get("X-API-Key") or request.query_params.get("api_key")
+        if key != settings.API_SECRET_KEY:
+            return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
+
+    return await call_next(request)
+
+
+# 3. CORS — restrict to known frontend origin
+allowed_origins = [settings.FRONTEND_URL]
+if settings.DEBUG:
+    allowed_origins = ["*"]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=allowed_origins,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["Content-Disposition"],
 )
 
 
+# --- Routers ---
 app.include_router(brands.router)
 app.include_router(briefs.router)
 app.include_router(generations.router)
@@ -69,7 +86,6 @@ app.include_router(websocket.router)
 
 # Servir arquivos estáticos do storage (imagens geradas)
 from fastapi.staticfiles import StaticFiles
-import os
 storage_path = os.environ.get("STORAGE_PATH", "/app/storage")
 os.makedirs(storage_path, exist_ok=True)
 app.mount("/storage", StaticFiles(directory=storage_path), name="storage")

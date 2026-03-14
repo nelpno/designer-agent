@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session
@@ -24,8 +24,8 @@ async def create_brand(
 
 @router.get("", response_model=list[BrandResponse])
 async def list_brands(
-    skip: int = 0,
-    limit: int = 20,
+    skip: int = Query(default=0, ge=0, le=10000),
+    limit: int = Query(default=20, ge=1, le=100),
     session: AsyncSession = Depends(get_session),
 ) -> list[BrandResponse]:
     brands = await brand_service.list_brands(session, skip=skip, limit=limit)
@@ -49,10 +49,12 @@ async def discover_brand(
     try:
         brand_data = await discover_brand_from_url(website_url, logo_base64=logo_base64)
         return {"discovered": brand_data, "message": "Brand data discovered. Review and create the brand."}
-    except httpx.HTTPError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Could not fetch website: {str(e)}")
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Discovery failed: {str(e)}")
+    except httpx.HTTPError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Não foi possível acessar o site informado.")
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Falha no processo de descoberta de marca.")
 
 
 @router.post("/discover-and-create", response_model=BrandResponse, status_code=status.HTTP_201_CREATED)
@@ -65,10 +67,12 @@ async def discover_and_create_brand(
 
     try:
         brand_data = await discover_brand_from_url(website_url)
-    except httpx.HTTPError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Could not fetch website: {str(e)}")
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Discovery failed: {str(e)}")
+    except httpx.HTTPError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Não foi possível acessar o site informado.")
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Falha no processo de descoberta de marca.")
 
     create_data = BrandCreate(
         name=brand_data.get("name", "Discovered Brand"),

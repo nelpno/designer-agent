@@ -165,7 +165,6 @@ async def discover_brand_from_url(website_url: str, logo_base64: str | None = No
     async with httpx.AsyncClient(
         follow_redirects=True,
         timeout=30.0,
-        verify=False,
         headers={"User-Agent": "Mozilla/5.0 (compatible; DesignerAgent/1.0)"},
     ) as http:
         # Step 1: Fetch main page

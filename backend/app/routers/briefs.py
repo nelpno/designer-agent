@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session
@@ -23,8 +23,8 @@ async def create_brief(
 
 @router.get("", response_model=list[BriefResponse])
 async def list_briefs(
-    skip: int = 0,
-    limit: int = 20,
+    skip: int = Query(default=0, ge=0, le=10000),
+    limit: int = Query(default=20, ge=1, le=100),
     status: str | None = None,
     session: AsyncSession = Depends(get_session),
 ) -> list[BriefResponse]:
@@ -75,10 +75,31 @@ Responda APENAS com JSON válido:
             text = re.sub(r'\s*```$', '', text)
 
         return json.loads(text)
-    except Exception as e:
-        return {"headline": "", "body_text": "", "cta_text": "", "error": str(e)}
+    except Exception:
+        return {"headline": "", "body_text": "", "cta_text": "", "error": "Falha ao gerar sugestões."}
     finally:
         await client.close()
+
+
+MAX_UPLOAD_SIZE = 10 * 1024 * 1024  # 10MB
+
+# Magic bytes → safe extension mapping
+_MAGIC_BYTES = {
+    b'\x89PNG': 'png',
+    b'\xff\xd8\xff': 'jpg',
+    b'GIF8': 'gif',
+}
+
+
+def _detect_image_type(content: bytes) -> str | None:
+    """Detect image type from magic bytes. Returns extension or None."""
+    for magic, ext in _MAGIC_BYTES.items():
+        if content[:len(magic)] == magic:
+            return ext
+    # WebP: starts with RIFF....WEBP
+    if content[:4] == b'RIFF' and content[8:12] == b'WEBP':
+        return 'webp'
+    return None
 
 
 @router.post("/upload-reference")
@@ -90,21 +111,24 @@ async def upload_reference(file: UploadFile = File(...)):
 
     settings = get_settings()
 
-    # Validate file type
-    allowed = {"image/png", "image/jpeg", "image/jpg", "image/webp", "image/gif"}
-    if file.content_type not in allowed:
-        raise HTTPException(status_code=400, detail=f"Tipo de arquivo não permitido: {file.content_type}")
+    # Read with size limit
+    content = await file.read(MAX_UPLOAD_SIZE + 1)
+    if len(content) > MAX_UPLOAD_SIZE:
+        raise HTTPException(status_code=413, detail="Arquivo muito grande (max 10MB)")
 
-    # Save file
+    # Validate actual content type via magic bytes (ignore client Content-Type)
+    detected_ext = _detect_image_type(content)
+    if not detected_ext:
+        raise HTTPException(status_code=400, detail="Tipo de arquivo inválido. Apenas PNG, JPG, WebP e GIF são aceitos.")
+
+    # Force safe extension from detected type
     ref_id = str(_uuid.uuid4())[:8]
-    ext = file.filename.split(".")[-1] if file.filename else "png"
-    filename = f"ref_{ref_id}.{ext}"
+    filename = f"ref_{ref_id}.{detected_ext}"
 
     save_dir = Path(settings.STORAGE_PATH) / "references"
     save_dir.mkdir(parents=True, exist_ok=True)
 
     file_path = save_dir / filename
-    content = await file.read()
     file_path.write_bytes(content)
 
     return {"url": f"/storage/references/{filename}", "filename": filename}
