@@ -15,19 +15,30 @@ class CreativeDirectorAgent(BaseAgent):
         # Build the system prompt
         system_prompt = """You are a Creative Director for a design agency. Your job is to interpret client briefs and define creative direction for art generation.
 
+IMPORTANT — Description Enhancement:
+If the client's description is vague, short, or lacks visual detail, you MUST enrich it significantly.
+Transform weak descriptions into rich creative briefs with specific visual elements, composition ideas, color treatments, and mood.
+Example: "promoção de verão" → "Vibrant summer promotion scene with tropical elements, beach-inspired color palette of coral and turquoise, dynamic diagonal composition with bold overlapping shapes, sunlit atmosphere with warm golden highlights"
+
 You must output a JSON object with these exact fields:
 {
-    "mood": "description of the overall mood/feeling",
-    "style": "artistic style (e.g., minimalist, bold, playful, corporate, photorealistic)",
-    "composition_notes": "how elements should be arranged",
-    "color_palette": ["#hex1", "#hex2", "#hex3"],
-    "typography_direction": "font style recommendations if text is involved",
+    "mood": "specific mood/feeling (e.g., 'energetic and aspirational with a sense of urgency')",
+    "style": "precise artistic style (e.g., 'modern corporate with geometric accents' not just 'professional')",
+    "composition_notes": "detailed layout instructions — element positions, visual hierarchy, focal points",
+    "color_palette": ["#hex1", "#hex2", "#hex3", "#hex4"],
+    "typography_direction": "specific font style, weight, case (e.g., 'bold condensed uppercase sans-serif, high contrast with background')",
     "reference_analysis": "analysis of any reference materials provided",
     "selected_art_type": "refined art type based on the brief",
-    "has_significant_text": true/false  // whether the final image needs readable text
+    "has_significant_text": true/false,
+    "enhanced_description": "your enriched, detailed version of the client's description — always more specific than the original"
 }
 
-Consider the brand guidelines if provided. Always output valid JSON only, no markdown."""
+Guidelines:
+- color_palette must always use HEX codes, not color names
+- If brand guidelines provide colors, incorporate them into the palette
+- has_significant_text = true whenever headline, body_text, or CTA are provided
+- Be bold and specific, never generic. "Clean and modern" is too vague. "Swiss-style grid layout with 60% negative space and accent color used only on CTA" is specific.
+- Output valid JSON only, no markdown."""
 
         # Build the user prompt with brief details
         user_prompt = self._build_user_prompt(context)
@@ -61,6 +72,10 @@ Consider the brand guidelines if provided. Always output valid JSON only, no mar
             selected_art_type=direction_data["selected_art_type"],
             has_significant_text=direction_data.get("has_significant_text", False),
         )
+
+        # Store enhanced description for downstream agents
+        if direction_data.get("enhanced_description"):
+            context.enhanced_description = direction_data["enhanced_description"]
 
         return context
 
@@ -101,6 +116,8 @@ Consider the brand guidelines if provided. Always output valid JSON only, no mar
                 parts.append(f"- Do: {', '.join(brand.do_rules)}")
             if brand.dont_rules:
                 parts.append(f"- Don't: {', '.join(brand.dont_rules)}")
+            if brand.logo_url:
+                parts.append(f"- Logo: brand has a logo that should be referenced in the design")
 
         return "\n".join(parts)
 

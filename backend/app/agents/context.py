@@ -108,6 +108,7 @@ class PipelineContext:
     generation_id: str | None = None  # unique per generation (used for storage paths)
 
     # Agent outputs (populated as pipeline progresses)
+    enhanced_description: str | None = None  # enriched by Creative Director
     creative_direction: CreativeDirection | None = None
     generation_prompt: GenerationPrompt | None = None
     generated_images: list[GeneratedImage] = field(default_factory=list)
