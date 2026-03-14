@@ -7,11 +7,11 @@ import ScoreBadge from '../components/ScoreBadge'
 import ModelBadge from '../components/ModelBadge'
 
 const STATUS_FILTERS = [
-  { label: 'All', value: '' },
-  { label: 'Completed', value: GenerationStatus.COMPLETED },
-  { label: 'Processing', value: GenerationStatus.PROCESSING },
-  { label: 'Pending', value: GenerationStatus.PENDING },
-  { label: 'Failed', value: GenerationStatus.FAILED },
+  { label: 'Todos', value: '' },
+  { label: 'Concluído', value: GenerationStatus.COMPLETED },
+  { label: 'Processando', value: GenerationStatus.PROCESSING },
+  { label: 'Pendente', value: GenerationStatus.PENDING },
+  { label: 'Falhou', value: GenerationStatus.FAILED },
 ]
 
 function ImageCard({ generation }: { generation: Generation }) {
@@ -28,7 +28,7 @@ function ImageCard({ generation }: { generation: Generation }) {
         {thumbnail ? (
           <img
             src={thumbnail}
-            alt="Generated design"
+            alt="Design gerado"
             className="w-full object-cover group-hover:scale-105 transition-transform duration-300"
             style={{ aspectRatio: '1/1' }}
           />
@@ -79,7 +79,7 @@ function ImageCard({ generation }: { generation: Generation }) {
           </div>
         </div>
         <p className="text-gray-500 text-xs mt-2">
-          {new Date(generation.created_at).toLocaleDateString('en-US', {
+          {new Date(generation.created_at).toLocaleDateString('pt-BR', {
             month: 'short',
             day: 'numeric',
             year: 'numeric',
@@ -104,7 +104,7 @@ export default function Gallery() {
         const res = await apiClient.get<Generation[]>('/api/generations?limit=50')
         setGenerations(res.data)
       } catch (err) {
-        setError('Failed to load gallery')
+        setError('Falha ao carregar a galeria')
         console.error(err)
       } finally {
         setLoading(false)
@@ -128,9 +128,9 @@ export default function Gallery() {
       {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-white">Gallery</h1>
+            <h1 className="text-2xl font-bold text-white">Galeria</h1>
             <p className="text-gray-400 mt-1">
-              {loading ? 'Loading...' : `${filtered.length} generation${filtered.length !== 1 ? 's' : ''}`}
+              {loading ? 'Carregando...' : `${filtered.length} geração${filtered.length !== 1 ? 'ões' : ''}`}
             </p>
           </div>
           <Link
@@ -140,7 +140,7 @@ export default function Gallery() {
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
-            New Brief
+            Novo Brief
           </Link>
         </div>
 
@@ -170,7 +170,7 @@ export default function Gallery() {
               onChange={(e) => setModelFilter(e.target.value)}
               className="px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
-              <option value="">All Models</option>
+              <option value="">Todos os Modelos</option>
               {availableModels.map((m) => (
                 <option key={m} value={m}>
                   {m}
@@ -191,7 +191,7 @@ export default function Gallery() {
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
-              Clear filters
+              Limpar filtros
             </button>
           )}
         </div>
@@ -229,19 +229,19 @@ export default function Gallery() {
               />
             </svg>
             <p className="text-gray-400 text-lg font-medium mb-2">
-              {statusFilter || modelFilter ? 'No results match your filters' : 'No generations yet'}
+              {statusFilter || modelFilter ? 'Nenhum resultado para os filtros aplicados' : 'Nenhuma imagem ainda'}
             </p>
             <p className="text-gray-600 text-sm mb-6">
               {statusFilter || modelFilter
-                ? 'Try clearing your filters'
-                : 'Create your first brief to get started'}
+                ? 'Tente limpar os filtros'
+                : 'Crie seu primeiro brief para começar'}
             </p>
             {!statusFilter && !modelFilter && (
               <Link
                 to="/new"
                 className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium text-sm transition-colors"
               >
-                Create First Brief
+                Criar Primeiro Brief
               </Link>
             )}
           </div>

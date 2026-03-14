@@ -142,7 +142,7 @@ function RuleList({
         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
         </svg>
-        Add rule
+        Adicionar regra
       </button>
     </div>
   )
@@ -220,7 +220,7 @@ function BrandModal({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!form.name.trim()) {
-      setError('Brand name is required')
+      setError('O nome da marca é obrigatório')
       return
     }
     try {
@@ -236,7 +236,7 @@ function BrandModal({
     } catch (err: unknown) {
       const message =
         (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
-        'Failed to save brand'
+        'Falha ao salvar a marca'
       setError(message)
     } finally {
       setSaving(false)
@@ -248,7 +248,7 @@ function BrandModal({
       <div className="bg-gray-900 rounded-2xl border border-gray-700 w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl">
         {/* Modal header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-800">
-          <h2 className="text-white font-bold text-lg">{isEdit ? 'Edit Brand' : 'New Brand'}</h2>
+          <h2 className="text-white font-bold text-lg">{isEdit ? 'Editar Marca' : 'Nova Marca'}</h2>
           <button
             onClick={onClose}
             className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
@@ -269,12 +269,12 @@ function BrandModal({
 
           {/* Name */}
           <div>
-            <InputLabel required>Brand Name</InputLabel>
+            <InputLabel required>Nome da Marca</InputLabel>
             <input
               type="text"
               value={form.name}
               onChange={(e) => setField('name', e.target.value)}
-              placeholder="e.g. Acme Corp"
+              placeholder="ex: Acme Corp"
               className={inputClass()}
               autoFocus
             />
@@ -282,7 +282,7 @@ function BrandModal({
 
           {/* Logo URL */}
           <div>
-            <InputLabel>Logo URL</InputLabel>
+            <InputLabel>URL do Logo</InputLabel>
             <input
               type="url"
               value={form.logo_url}
@@ -294,7 +294,7 @@ function BrandModal({
 
           {/* Website */}
           <div>
-            <InputLabel>Website URL</InputLabel>
+            <InputLabel>URL do Site</InputLabel>
             <input
               type="url"
               value={form.website_url}
@@ -307,7 +307,7 @@ function BrandModal({
           {/* Primary Colors */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <InputLabel>Primary Colors</InputLabel>
+              <InputLabel>Cores Primárias</InputLabel>
               <button
                 type="button"
                 onClick={() => addColor('primary_colors')}
@@ -316,7 +316,7 @@ function BrandModal({
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
-                Add color
+                Adicionar cor
               </button>
             </div>
             <div className="space-y-2">
@@ -335,7 +335,7 @@ function BrandModal({
           {/* Secondary Colors */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <InputLabel>Secondary Colors</InputLabel>
+              <InputLabel>Cores Secundárias</InputLabel>
               <button
                 type="button"
                 onClick={() => addColor('secondary_colors')}
@@ -344,7 +344,7 @@ function BrandModal({
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
-                Add color
+                Adicionar cor
               </button>
             </div>
             <div className="space-y-2">
@@ -363,22 +363,22 @@ function BrandModal({
           {/* Fonts */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <InputLabel>Heading Font</InputLabel>
+              <InputLabel>Fonte de Título</InputLabel>
               <input
                 type="text"
                 value={form.font_heading}
                 onChange={(e) => setField('font_heading', e.target.value)}
-                placeholder="e.g. Montserrat"
+                placeholder="ex: Montserrat"
                 className={inputClass()}
               />
             </div>
             <div>
-              <InputLabel>Body Font</InputLabel>
+              <InputLabel>Fonte de Corpo</InputLabel>
               <input
                 type="text"
                 value={form.font_body}
                 onChange={(e) => setField('font_body', e.target.value)}
-                placeholder="e.g. Inter"
+                placeholder="ex: Inter"
                 className={inputClass()}
               />
             </div>
@@ -386,11 +386,11 @@ function BrandModal({
 
           {/* Tone of Voice */}
           <div>
-            <InputLabel>Tone of Voice</InputLabel>
+            <InputLabel>Tom de Voz</InputLabel>
             <textarea
               value={form.tone_of_voice}
               onChange={(e) => setField('tone_of_voice', e.target.value)}
-              placeholder="Describe the brand's tone, personality, and voice..."
+              placeholder="Descreva o tom, personalidade e voz da marca..."
               rows={3}
               className={inputClass('resize-none')}
             />
@@ -398,21 +398,21 @@ function BrandModal({
 
           {/* Do Rules */}
           <div>
-            <InputLabel>Do's — What to include/use</InputLabel>
+            <InputLabel>Regras Do (Fazer)</InputLabel>
             <RuleList
               values={form.do_rules}
               onChange={(v) => setField('do_rules', v)}
-              placeholder="Always use high-contrast colors..."
+              placeholder="Sempre use cores de alto contraste..."
             />
           </div>
 
           {/* Don't Rules */}
           <div>
-            <InputLabel>Don'ts — What to avoid</InputLabel>
+            <InputLabel>Regras Don't (Não Fazer)</InputLabel>
             <RuleList
               values={form.dont_rules}
               onChange={(v) => setField('dont_rules', v)}
-              placeholder="Never use more than 3 colors..."
+              placeholder="Nunca use mais de 3 cores..."
             />
           </div>
         </form>
@@ -424,7 +424,7 @@ function BrandModal({
             onClick={onClose}
             className="px-4 py-2 text-gray-400 hover:text-white border border-gray-700 hover:border-gray-500 rounded-lg text-sm font-medium transition-colors"
           >
-            Cancel
+            Cancelar
           </button>
           <button
             onClick={handleSubmit as unknown as React.MouseEventHandler}
@@ -437,7 +437,7 @@ function BrandModal({
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
               </svg>
             ) : null}
-            {isEdit ? 'Save Changes' : 'Create Brand'}
+            {isEdit ? 'Salvar Alterações' : 'Criar Marca'}
           </button>
         </div>
       </div>
@@ -507,7 +507,7 @@ function BrandCard({
         <div className="space-y-2 mb-4">
           {primaryColors.length > 0 && (
             <div className="flex items-center gap-2">
-              <span className="text-gray-500 text-xs w-16">Primary</span>
+              <span className="text-gray-500 text-xs w-16">Primária</span>
               <div className="flex gap-1.5">
                 {primaryColors.slice(0, 5).map((c, i) => (
                   <div
@@ -522,7 +522,7 @@ function BrandCard({
           )}
           {secondaryColors.length > 0 && (
             <div className="flex items-center gap-2">
-              <span className="text-gray-500 text-xs w-16">Secondary</span>
+              <span className="text-gray-500 text-xs w-16">Secundária</span>
               <div className="flex gap-1.5">
                 {secondaryColors.slice(0, 5).map((c, i) => (
                   <div
@@ -567,7 +567,7 @@ function BrandCard({
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
             </svg>
-            Edit
+            Editar
           </button>
           <button
             onClick={onDelete}
@@ -576,7 +576,7 @@ function BrandCard({
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
             </svg>
-            Delete
+            Excluir
           </button>
         </div>
       </div>
@@ -599,7 +599,7 @@ export default function BrandManagement() {
       const res = await apiClient.get<Brand[]>('/api/brands')
       setBrands(res.data)
     } catch (err) {
-      setError('Failed to load brands')
+      setError('Falha ao carregar marcas')
       console.error(err)
     } finally {
       setLoading(false)
@@ -637,7 +637,7 @@ export default function BrandManagement() {
       await apiClient.delete(`/api/brands/${confirmDelete.id}`)
       setBrands((prev) => prev.filter((b) => b.id !== confirmDelete.id))
     } catch {
-      setError('Failed to delete brand')
+      setError('Falha ao excluir a marca')
     } finally {
       setDeletingId(null)
       setConfirmDelete(null)
@@ -649,9 +649,9 @@ export default function BrandManagement() {
       {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-white">Brand Management</h1>
+            <h1 className="text-2xl font-bold text-white">Gestão de Marcas</h1>
             <p className="text-gray-400 mt-1">
-              {loading ? 'Loading...' : `${brands.length} brand${brands.length !== 1 ? 's' : ''}`}
+              {loading ? 'Carregando...' : `${brands.length} marca${brands.length !== 1 ? 's' : ''}`}
             </p>
           </div>
           <button
@@ -661,14 +661,14 @@ export default function BrandManagement() {
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
-            New Brand
+            Nova Marca
           </button>
         </div>
 
         {error && (
           <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm">
             {error}
-            <button onClick={() => setError(null)} className="ml-3 underline hover:no-underline">Dismiss</button>
+            <button onClick={() => setError(null)} className="ml-3 underline hover:no-underline">Fechar</button>
           </div>
         )}
 
@@ -685,13 +685,13 @@ export default function BrandManagement() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
               </svg>
             </div>
-            <p className="text-gray-400 text-lg font-medium mb-2">No brands yet</p>
-            <p className="text-gray-600 text-sm mb-6">Create your first brand to use in design briefs</p>
+            <p className="text-gray-400 text-lg font-medium mb-2">Nenhuma marca ainda</p>
+            <p className="text-gray-600 text-sm mb-6">Crie sua primeira marca para usar nos briefs de design</p>
             <button
               onClick={openCreate}
               className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium text-sm transition-colors"
             >
-              Create First Brand
+              Criar Primeira Marca
             </button>
           </div>
         ) : (
@@ -721,16 +721,16 @@ export default function BrandManagement() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
               </div>
-              <h3 className="text-white font-bold text-lg text-center mb-2">Delete Brand</h3>
+              <h3 className="text-white font-bold text-lg text-center mb-2">Excluir Marca</h3>
               <p className="text-gray-400 text-sm text-center mb-6">
-                Are you sure you want to delete <strong className="text-white">{confirmDelete.name}</strong>? This action cannot be undone.
+                Tem certeza que deseja excluir <strong className="text-white">{confirmDelete.name}</strong>? Esta ação não pode ser desfeita.
               </p>
               <div className="flex gap-3">
                 <button
                   onClick={() => setConfirmDelete(null)}
                   className="flex-1 px-4 py-2 border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-white rounded-lg text-sm font-medium transition-colors"
                 >
-                  Cancel
+                  Cancelar
                 </button>
                 <button
                   onClick={handleDelete}
@@ -743,7 +743,7 @@ export default function BrandManagement() {
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                     </svg>
                   ) : null}
-                  Delete
+                  Excluir
                 </button>
               </div>
             </div>

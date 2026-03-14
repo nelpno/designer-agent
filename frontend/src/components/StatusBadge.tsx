@@ -7,23 +7,23 @@ interface StatusBadgeProps {
 
 const statusConfig: Record<string, { label: string; classes: string }> = {
   pending: {
-    label: 'Pending',
+    label: 'Pendente',
     classes: 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30',
   },
   processing: {
-    label: 'Processing',
+    label: 'Processando',
     classes: 'bg-blue-500/20 text-blue-400 border border-blue-500/30 animate-pulse',
   },
   running: {
-    label: 'Running',
+    label: 'Processando',
     classes: 'bg-blue-500/20 text-blue-400 border border-blue-500/30 animate-pulse',
   },
   completed: {
-    label: 'Completed',
+    label: 'Concluído',
     classes: 'bg-green-500/20 text-green-400 border border-green-500/30',
   },
   failed: {
-    label: 'Failed',
+    label: 'Falhou',
     classes: 'bg-red-500/20 text-red-400 border border-red-500/30',
   },
 }

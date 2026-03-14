@@ -34,7 +34,7 @@ export default function ModelBadge({ model, className = '' }: ModelBadgeProps) {
       <span
         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-500/20 text-gray-500 border border-gray-500/30 ${className}`}
       >
-        No model
+        Sem modelo
       </span>
     )
   }

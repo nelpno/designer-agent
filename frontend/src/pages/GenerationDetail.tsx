@@ -62,7 +62,7 @@ function PipelineTrace({ logs, pipelineContext }: { logs: PipelineLog[]; pipelin
   if (steps.length === 0) {
     return (
       <div className="text-center py-8 text-gray-600 text-sm">
-        No pipeline trace available yet
+        Nenhum pipeline disponível ainda
       </div>
     )
   }
@@ -116,7 +116,7 @@ function PipelineTrace({ logs, pipelineContext }: { logs: PipelineLog[]; pipelin
               {step.reasoning && (
                 <details className="mt-2">
                   <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-400 select-none">
-                    Reasoning
+                    Raciocínio
                   </summary>
                   <pre className="mt-2 text-xs text-gray-400 bg-gray-900/50 rounded p-3 overflow-auto max-h-40 whitespace-pre-wrap">
                     {step.reasoning}
@@ -155,7 +155,7 @@ export default function GenerationDetail() {
       setImages(imagesRes.data)
       setLogs(logsRes.data)
     } catch (err) {
-      setError('Failed to load generation')
+      setError('Falha ao carregar a geração')
       console.error(err)
     } finally {
       setLoading(false)
@@ -215,7 +215,7 @@ export default function GenerationDetail() {
       const res = await apiClient.post<Generation>(`/api/generations/${id}/retry`)
       setGeneration(res.data)
     } catch {
-      setError('Failed to retry generation')
+      setError('Falha ao re-gerar')
     } finally {
       setRetrying(false)
     }
@@ -227,7 +227,7 @@ export default function GenerationDetail() {
       const res = await apiClient.post<{ id: string }>(`/api/generations/from-brief/${generation.brief_id}`)
       navigate(`/generation/${res.data.id}`)
     } catch {
-      setError('Failed to start variation')
+      setError('Falha ao gerar variação')
     }
   }
 
@@ -252,7 +252,7 @@ export default function GenerationDetail() {
         </button>
         <div className="flex-1">
           <div className="flex items-center gap-3">
-            <h1 className="text-xl font-bold text-white">Generation Detail</h1>
+            <h1 className="text-xl font-bold text-white">Detalhe da Geração</h1>
             {generation && <StatusBadge status={generation.status} />}
           </div>
           {id && <p className="text-gray-500 text-xs mt-0.5 font-mono">{id}</p>}
@@ -275,7 +275,7 @@ export default function GenerationDetail() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
                 )}
-                Retry
+                Re-gerar
               </button>
             )}
             {generation.status === GenerationStatus.COMPLETED && generation.brief_id && (
@@ -286,7 +286,7 @@ export default function GenerationDetail() {
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                 </svg>
-                Generate Variation
+                Gerar Variação
               </button>
             )}
           </div>
@@ -310,7 +310,7 @@ export default function GenerationDetail() {
         </div>
       ) : !generation ? (
         <div className="bg-gray-800 rounded-xl border border-gray-700 p-16 text-center">
-          <p className="text-gray-400">Generation not found</p>
+          <p className="text-gray-400">Geração não encontrada</p>
         </div>
       ) : (
         <div className="flex gap-6">
@@ -321,13 +321,13 @@ export default function GenerationDetail() {
               {currentImage ? (
                 <img
                   src={currentImage.image_url}
-                  alt="Generated design"
+                  alt="Design gerado"
                   className="w-full object-contain max-h-[600px]"
                 />
               ) : generation.final_image_url ? (
                 <img
                   src={generation.final_image_url}
-                  alt="Generated design"
+                  alt="Design gerado"
                   className="w-full object-contain max-h-[600px]"
                 />
               ) : generation.status === GenerationStatus.PENDING ||
@@ -337,7 +337,7 @@ export default function GenerationDetail() {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                   </svg>
-                  <p className="text-gray-400 text-sm">Generating image...</p>
+                  <p className="text-gray-400 text-sm">Gerando imagem...</p>
                 </div>
               ) : (
                 <div className="aspect-square flex items-center justify-center">
@@ -355,7 +355,7 @@ export default function GenerationDetail() {
                         d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
                       />
                     </svg>
-                    <p className="text-gray-500 text-sm">No image generated</p>
+                    <p className="text-gray-500 text-sm">Nenhuma imagem gerada</p>
                   </div>
                 </div>
               )}
@@ -374,7 +374,7 @@ export default function GenerationDetail() {
                   >
                     <img
                       src={img.thumbnail_url ?? img.image_url}
-                      alt={`Iteration ${idx + 1}`}
+                      alt={`Iteração ${idx + 1}`}
                       className="w-full h-full object-cover"
                     />
                   </button>
@@ -384,7 +384,7 @@ export default function GenerationDetail() {
 
             {/* Pipeline Trace */}
             <div className="bg-gray-800 rounded-xl border border-gray-700 p-6">
-              <h2 className="text-white font-semibold mb-5">Pipeline Trace</h2>
+              <h2 className="text-white font-semibold mb-5">Pipeline</h2>
               <PipelineTrace logs={logs} pipelineContext={pipelineContext} />
             </div>
           </div>
@@ -393,7 +393,7 @@ export default function GenerationDetail() {
           <div className="flex-[2] space-y-4">
             {/* Status & Meta */}
             <div className="bg-gray-800 rounded-xl border border-gray-700 p-5">
-              <h2 className="text-white font-semibold mb-4">Details</h2>
+              <h2 className="text-white font-semibold mb-4">Detalhes</h2>
               <dl className="space-y-3">
                 <div className="flex items-center justify-between">
                   <dt className="text-gray-500 text-sm">Status</dt>
@@ -401,39 +401,39 @@ export default function GenerationDetail() {
                 </div>
                 {generation.model_used && (
                   <div className="flex items-center justify-between">
-                    <dt className="text-gray-500 text-sm">Model</dt>
+                    <dt className="text-gray-500 text-sm">Modelo</dt>
                     <dd><ModelBadge model={generation.model_used} /></dd>
                   </div>
                 )}
                 {generation.final_score != null && (
                   <div className="flex items-center justify-between">
-                    <dt className="text-gray-500 text-sm">Quality Score</dt>
+                    <dt className="text-gray-500 text-sm">Score de Qualidade</dt>
                     <dd><ScoreBadge score={generation.final_score} /></dd>
                   </div>
                 )}
                 {generation.iterations_used > 0 && (
                   <div className="flex items-center justify-between">
-                    <dt className="text-gray-500 text-sm">Iterations</dt>
+                    <dt className="text-gray-500 text-sm">Iterações</dt>
                     <dd className="text-gray-300 text-sm">{generation.iterations_used}</dd>
                   </div>
                 )}
                 {generation.total_duration_ms != null && (
                   <div className="flex items-center justify-between">
-                    <dt className="text-gray-500 text-sm">Duration</dt>
+                    <dt className="text-gray-500 text-sm">Duração</dt>
                     <dd className="text-gray-300 text-sm">
                       {(generation.total_duration_ms / 1000).toFixed(1)}s
                     </dd>
                   </div>
                 )}
                 <div className="flex items-center justify-between">
-                  <dt className="text-gray-500 text-sm">Created</dt>
+                  <dt className="text-gray-500 text-sm">Criado em</dt>
                   <dd className="text-gray-300 text-sm">
-                    {new Date(generation.created_at).toLocaleString()}
+                    {new Date(generation.created_at).toLocaleString('pt-BR')}
                   </dd>
                 </div>
                 {generation.brief_id && (
                   <div className="flex items-center justify-between">
-                    <dt className="text-gray-500 text-sm">Brief ID</dt>
+                    <dt className="text-gray-500 text-sm">ID do Brief</dt>
                     <dd className="text-gray-400 text-xs font-mono truncate max-w-[140px]">
                       {generation.brief_id}
                     </dd>
@@ -445,7 +445,7 @@ export default function GenerationDetail() {
             {/* Error message */}
             {generation.error_message && (
               <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-5">
-                <h3 className="text-red-400 font-medium text-sm mb-2">Error</h3>
+                <h3 className="text-red-400 font-medium text-sm mb-2">Erro</h3>
                 <p className="text-red-300 text-sm">{generation.error_message}</p>
               </div>
             )}
@@ -453,7 +453,7 @@ export default function GenerationDetail() {
             {/* Prompt */}
             {promptUsed && (
               <div className="bg-gray-800 rounded-xl border border-gray-700 p-5">
-                <h3 className="text-white font-semibold text-sm mb-3">Prompt Used</h3>
+                <h3 className="text-white font-semibold text-sm mb-3">Prompt Utilizado</h3>
                 <p className="text-gray-300 text-sm leading-relaxed">{promptUsed}</p>
               </div>
             )}
@@ -461,7 +461,7 @@ export default function GenerationDetail() {
             {/* Negative Prompt */}
             {negativePromptUsed && (
               <div className="bg-gray-800 rounded-xl border border-gray-700 p-5">
-                <h3 className="text-white font-semibold text-sm mb-3">Negative Prompt</h3>
+                <h3 className="text-white font-semibold text-sm mb-3">Prompt Negativo</h3>
                 <p className="text-gray-400 text-sm leading-relaxed">{negativePromptUsed}</p>
               </div>
             )}

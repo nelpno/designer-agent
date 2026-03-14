@@ -4,15 +4,15 @@ import { apiClient } from '../api/client'
 import { Brand } from '../types'
 
 const ART_TYPES = [
-  { value: 'ad_creative', label: 'Ad Creative' },
-  { value: 'social_post', label: 'Social Post' },
+  { value: 'ad_creative', label: 'Criativo para Ads' },
+  { value: 'social_post', label: 'Post Social' },
   { value: 'logo', label: 'Logo' },
-  { value: 'product_shot', label: 'Product Shot' },
-  { value: 'lifestyle_photo', label: 'Lifestyle Photo' },
+  { value: 'product_shot', label: 'Foto de Produto' },
+  { value: 'lifestyle_photo', label: 'Foto Lifestyle' },
   { value: 'mockup', label: 'Mockup' },
-  { value: 'illustration', label: 'Illustration' },
-  { value: 'presentation_slide', label: 'Presentation Slide' },
-  { value: 'brand_material', label: 'Brand Material' },
+  { value: 'illustration', label: 'Ilustração' },
+  { value: 'presentation_slide', label: 'Slide' },
+  { value: 'brand_material', label: 'Material de Marca' },
 ]
 
 const PLATFORMS = [
@@ -20,14 +20,14 @@ const PLATFORMS = [
   { value: 'google', label: 'Google Ads' },
   { value: 'instagram', label: 'Instagram' },
   { value: 'linkedin', label: 'LinkedIn' },
-  { value: 'general', label: 'General' },
+  { value: 'general', label: 'Geral' },
 ]
 
 const FORMAT_PRESETS = [
-  { label: '1:1 Square', width: 1080, height: 1080 },
-  { label: 'Landscape', width: 1200, height: 628 },
+  { label: '1:1 Quadrado', width: 1080, height: 1080 },
+  { label: 'Paisagem', width: 1200, height: 628 },
   { label: 'Story / Reel', width: 1080, height: 1920 },
-  { label: 'Custom', width: null, height: null },
+  { label: 'Personalizado', width: null, height: null },
 ]
 
 interface BriefFormData {
@@ -125,7 +125,7 @@ export default function NewBrief() {
     setError(null)
 
     if (!form.art_type || !form.platform) {
-      setError('Art type and platform are required.')
+      setError('Tipo de arte e plataforma são obrigatórios.')
       return
     }
 
@@ -160,7 +160,7 @@ export default function NewBrief() {
     } catch (err: unknown) {
       const message =
         (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
-        'Failed to create brief. Please try again.'
+        'Falha ao criar brief. Por favor, tente novamente.'
       setError(message)
     } finally {
       setSubmitting(false)
@@ -171,8 +171,8 @@ export default function NewBrief() {
     <div className="p-8">
       {/* Header */}
       <div className="mb-8">
-          <h1 className="text-2xl font-bold text-white">New Brief</h1>
-          <p className="text-gray-400 mt-1">Describe what you want to design and let the AI take over</p>
+          <h1 className="text-2xl font-bold text-white">Novo Brief</h1>
+          <p className="text-gray-400 mt-1">Descreva o que você quer criar e deixe a IA trabalhar</p>
         </div>
 
         {error && (
@@ -186,11 +186,11 @@ export default function NewBrief() {
             {/* LEFT: Structured form (60%) */}
             <div className="flex-[3] space-y-6">
               <div className="bg-gray-800 rounded-xl border border-gray-700 p-6 space-y-5">
-                <h2 className="text-white font-semibold text-base">Design Parameters</h2>
+                <h2 className="text-white font-semibold text-base">Parâmetros de Design</h2>
 
                 {/* Art Type */}
                 <div>
-                  <InputLabel required>Art Type</InputLabel>
+                  <InputLabel required>Tipo de Arte</InputLabel>
                   <select
                     value={form.art_type}
                     onChange={(e) => setField('art_type', e.target.value)}
@@ -206,7 +206,7 @@ export default function NewBrief() {
 
                 {/* Platform */}
                 <div>
-                  <InputLabel required>Platform</InputLabel>
+                  <InputLabel required>Plataforma</InputLabel>
                   <select
                     value={form.platform}
                     onChange={(e) => setField('platform', e.target.value)}
@@ -222,7 +222,7 @@ export default function NewBrief() {
 
                 {/* Format */}
                 <div>
-                  <InputLabel>Format</InputLabel>
+                  <InputLabel>Formato</InputLabel>
                   <div className="flex flex-wrap gap-2 mb-3">
                     {FORMAT_PRESETS.map((preset, idx) => (
                       <button
@@ -247,7 +247,7 @@ export default function NewBrief() {
                   {isCustomFormat && (
                     <div className="flex items-center gap-3">
                       <div className="flex-1">
-                        <InputLabel>Width (px)</InputLabel>
+                        <InputLabel>Largura (px)</InputLabel>
                         <input
                           type="number"
                           value={form.custom_width}
@@ -259,7 +259,7 @@ export default function NewBrief() {
                       </div>
                       <div className="pt-6 text-gray-500">×</div>
                       <div className="flex-1">
-                        <InputLabel>Height (px)</InputLabel>
+                        <InputLabel>Altura (px)</InputLabel>
                         <input
                           type="number"
                           value={form.custom_height}
@@ -275,13 +275,13 @@ export default function NewBrief() {
 
                 {/* Brand */}
                 <div>
-                  <InputLabel>Brand</InputLabel>
+                  <InputLabel>Marca</InputLabel>
                   <select
                     value={form.brand_id}
                     onChange={(e) => setField('brand_id', e.target.value)}
                     className={inputClass()}
                   >
-                    <option value="">No brand (generic)</option>
+                    <option value="">Sem marca (genérico)</option>
                     {brands.map((b) => (
                       <option key={b.id} value={b.id}>
                         {b.name}
@@ -293,37 +293,37 @@ export default function NewBrief() {
 
               {/* Copy */}
               <div className="bg-gray-800 rounded-xl border border-gray-700 p-6 space-y-5">
-                <h2 className="text-white font-semibold text-base">Copy &amp; Messaging</h2>
+                <h2 className="text-white font-semibold text-base">Texto &amp; Mensagem</h2>
 
                 <div>
-                  <InputLabel>Headline</InputLabel>
+                  <InputLabel>Título</InputLabel>
                   <input
                     type="text"
                     value={form.headline}
                     onChange={(e) => setField('headline', e.target.value)}
-                    placeholder="Main headline text"
+                    placeholder="Texto principal do título"
                     className={inputClass()}
                   />
                 </div>
 
                 <div>
-                  <InputLabel>Body Text</InputLabel>
+                  <InputLabel>Texto</InputLabel>
                   <textarea
                     value={form.body_text}
                     onChange={(e) => setField('body_text', e.target.value)}
-                    placeholder="Supporting body copy..."
+                    placeholder="Texto de apoio..."
                     rows={3}
                     className={inputClass('resize-none')}
                   />
                 </div>
 
                 <div>
-                  <InputLabel>CTA Text</InputLabel>
+                  <InputLabel>Texto do CTA</InputLabel>
                   <input
                     type="text"
                     value={form.cta_text}
                     onChange={(e) => setField('cta_text', e.target.value)}
-                    placeholder="e.g. Shop Now, Learn More, Sign Up"
+                    placeholder="ex: Compre Agora, Saiba Mais, Cadastre-se"
                     className={inputClass()}
                   />
                 </div>
@@ -333,8 +333,8 @@ export default function NewBrief() {
               <div className="bg-gray-800 rounded-xl border border-gray-700 p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <h2 className="text-white font-semibold text-base">Reference URLs</h2>
-                    <p className="text-gray-500 text-xs mt-0.5">Links to reference images or designs</p>
+                    <h2 className="text-white font-semibold text-base">URLs de Referência</h2>
+                    <p className="text-gray-500 text-xs mt-0.5">Links para imagens ou designs de referência</p>
                   </div>
                   <button
                     type="button"
@@ -344,7 +344,7 @@ export default function NewBrief() {
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                     </svg>
-                    Add URL
+                    Adicionar URL
                   </button>
                 </div>
                 <div className="space-y-2">
@@ -378,16 +378,16 @@ export default function NewBrief() {
             <div className="flex-[2] space-y-6">
               <div className="bg-gray-800 rounded-xl border border-gray-700 p-6 flex flex-col" style={{ minHeight: '420px' }}>
                 <div className="mb-4">
-                  <h2 className="text-white font-semibold text-base">Description</h2>
+                  <h2 className="text-white font-semibold text-base">Descrição</h2>
                   <p className="text-gray-500 text-xs mt-0.5">
-                    Describe what you want in natural language. Be as detailed as possible.
+                    Descreva o que você quer em linguagem natural. Seja o mais detalhado possível.
                   </p>
                 </div>
 
                 <textarea
                   value={form.description}
                   onChange={(e) => setField('description', e.target.value)}
-                  placeholder="Describe the design you want...&#10;&#10;Example: A vibrant ad creative for a summer sale, featuring a beach scene with bright colors. The brand colors are blue and orange. The mood should be energetic and fun, targeting young adults aged 18-35..."
+                  placeholder="Descreva o design que você quer...&#10;&#10;Exemplo: Um criativo vibrante para uma promoção de verão, com cena de praia e cores vivas. As cores da marca são azul e laranja. O tom deve ser energético e divertido, voltado para jovens adultos de 18 a 35 anos..."
                   className={`${inputClass('flex-1 resize-none')} min-h-[280px]`}
                 />
 
@@ -400,8 +400,8 @@ export default function NewBrief() {
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                     </svg>
-                    Upload Reference Images
-                    <span className="text-gray-600 text-xs">(coming soon)</span>
+                    Enviar Imagens de Referência
+                    <span className="text-gray-600 text-xs">(em breve)</span>
                   </button>
                 </div>
               </div>
@@ -409,29 +409,29 @@ export default function NewBrief() {
               {/* Summary */}
               {(form.art_type || form.platform) && (
                 <div className="bg-gray-800 rounded-xl border border-gray-700 p-5">
-                  <h3 className="text-gray-400 text-xs font-medium uppercase tracking-wider mb-3">Summary</h3>
+                  <h3 className="text-gray-400 text-xs font-medium uppercase tracking-wider mb-3">Resumo</h3>
                   <dl className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <dt className="text-gray-500 text-sm">Art Type</dt>
+                      <dt className="text-gray-500 text-sm">Tipo de Arte</dt>
                       <dd className="text-gray-200 text-sm font-medium capitalize">
-                        {form.art_type.replace(/_/g, ' ')}
+                        {ART_TYPES.find((t) => t.value === form.art_type)?.label ?? form.art_type.replace(/_/g, ' ')}
                       </dd>
                     </div>
                     <div className="flex items-center justify-between">
-                      <dt className="text-gray-500 text-sm">Platform</dt>
+                      <dt className="text-gray-500 text-sm">Plataforma</dt>
                       <dd className="text-gray-200 text-sm font-medium capitalize">
-                        {form.platform.replace(/_/g, ' ')}
+                        {PLATFORMS.find((p) => p.value === form.platform)?.label ?? form.platform.replace(/_/g, ' ')}
                       </dd>
                     </div>
                     <div className="flex items-center justify-between">
-                      <dt className="text-gray-500 text-sm">Size</dt>
+                      <dt className="text-gray-500 text-sm">Tamanho</dt>
                       <dd className="text-gray-200 text-sm font-medium">
                         {form.format === 'custom' ? `${form.custom_width} × ${form.custom_height}` : form.format}
                       </dd>
                     </div>
                     {form.brand_id && (
                       <div className="flex items-center justify-between">
-                        <dt className="text-gray-500 text-sm">Brand</dt>
+                        <dt className="text-gray-500 text-sm">Marca</dt>
                         <dd className="text-gray-200 text-sm font-medium">
                           {brands.find((b) => b.id === form.brand_id)?.name ?? form.brand_id}
                         </dd>
@@ -450,7 +450,7 @@ export default function NewBrief() {
               onClick={() => navigate(-1)}
               className="px-5 py-2.5 text-gray-400 hover:text-white rounded-lg border border-gray-700 hover:border-gray-500 transition-colors text-sm font-medium"
             >
-              Cancel
+              Cancelar
             </button>
             <button
               type="submit"
@@ -463,14 +463,14 @@ export default function NewBrief() {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                   </svg>
-                  Generating...
+                  Gerando...
                 </>
               ) : (
                 <>
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
-                  Generate Design
+                  Gerar Design
                 </>
               )}
             </button>

@@ -93,7 +93,7 @@ function GenerationCard({ generation }: { generation: Generation }) {
           {generation.final_score != null && <ScoreBadge score={generation.final_score} />}
         </div>
         <p className="text-gray-500 text-xs mt-2">
-          {new Date(generation.created_at).toLocaleDateString('en-US', {
+          {new Date(generation.created_at).toLocaleDateString('pt-BR', {
             month: 'short',
             day: 'numeric',
             hour: '2-digit',
@@ -144,8 +144,8 @@ export default function Dashboard() {
       {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-white">Dashboard</h1>
-            <p className="text-gray-400 mt-1">Overview of your design generations</p>
+            <h1 className="text-2xl font-bold text-white">Painel</h1>
+            <p className="text-gray-400 mt-1">Visão geral das suas gerações de design</p>
           </div>
           <Link
             to="/new"
@@ -154,7 +154,7 @@ export default function Dashboard() {
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
-            New Brief
+            Novo Brief
           </Link>
         </div>
 
@@ -167,7 +167,7 @@ export default function Dashboard() {
         {/* Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <StatCard
-            label="Total Generations"
+            label="Total de Gerações"
             value={stats?.total_generations ?? generations.length}
             loading={loading}
             color="bg-indigo-500/20"
@@ -178,7 +178,7 @@ export default function Dashboard() {
             }
           />
           <StatCard
-            label="Avg Score"
+            label="Score Médio"
             value={stats?.average_score != null ? `${stats.average_score.toFixed(1)}` : '—'}
             loading={loading}
             color="bg-green-500/20"
@@ -189,7 +189,7 @@ export default function Dashboard() {
             }
           />
           <StatCard
-            label="Models Used"
+            label="Modelos Usados"
             value={modelsUsed}
             loading={loading}
             color="bg-purple-500/20"
@@ -200,7 +200,7 @@ export default function Dashboard() {
             }
           />
           <StatCard
-            label="Active Brands"
+            label="Marcas Ativas"
             value={activeBrands}
             loading={loading}
             color="bg-orange-500/20"
@@ -215,9 +215,9 @@ export default function Dashboard() {
         {/* Recent Generations */}
         <div>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-white">Recent Generations</h2>
+            <h2 className="text-lg font-semibold text-white">Gerações Recentes</h2>
             <Link to="/gallery" className="text-indigo-400 hover:text-indigo-300 text-sm transition-colors">
-              View all →
+              Ver todas →
             </Link>
           </div>
 
@@ -248,13 +248,13 @@ export default function Dashboard() {
                   d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
                 />
               </svg>
-              <p className="text-gray-400 text-lg font-medium mb-2">No generations yet</p>
-              <p className="text-gray-600 text-sm mb-6">Start by creating your first design brief</p>
+              <p className="text-gray-400 text-lg font-medium mb-2">Nenhuma geração ainda</p>
+              <p className="text-gray-600 text-sm mb-6">Comece criando seu primeiro brief de design</p>
               <Link
                 to="/new"
                 className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors"
               >
-                Create First Brief
+                Criar Primeiro Brief
               </Link>
             </div>
           ) : (
@@ -269,19 +269,19 @@ export default function Dashboard() {
         {/* Quick status breakdown */}
         {!loading && stats && (
           <div className="mt-8 bg-gray-800 rounded-xl border border-gray-700 p-6">
-            <h2 className="text-lg font-semibold text-white mb-4">Status Breakdown</h2>
+            <h2 className="text-lg font-semibold text-white mb-4">Resumo por Status</h2>
             <div className="flex items-center gap-6 flex-wrap">
               <div className="flex items-center gap-2">
                 <StatusBadge status={GenerationStatus.COMPLETED} />
-                <span className="text-gray-300 text-sm">{stats.completed_generations ?? 0} completed</span>
+                <span className="text-gray-300 text-sm">{stats.completed_generations ?? 0} concluídas</span>
               </div>
               <div className="flex items-center gap-2">
                 <StatusBadge status={GenerationStatus.FAILED} />
-                <span className="text-gray-300 text-sm">{stats.failed_generations ?? 0} failed</span>
+                <span className="text-gray-300 text-sm">{stats.failed_generations ?? 0} falharam</span>
               </div>
               {stats.total_images != null && (
                 <div className="flex items-center gap-2">
-                  <span className="text-gray-500 text-sm">{stats.total_images} total images generated</span>
+                  <span className="text-gray-500 text-sm">{stats.total_images} imagens geradas no total</span>
                 </div>
               )}
             </div>
