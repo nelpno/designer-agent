@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session
@@ -101,11 +101,12 @@ async def update_brand(
     return BrandResponse.model_validate(brand)
 
 
-@router.delete("/{brand_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{brand_id}", status_code=status.HTTP_204_NO_CONTENT, response_model=None)
 async def delete_brand(
     brand_id: uuid.UUID,
     session: AsyncSession = Depends(get_session),
-) -> None:
+):
     deleted = await brand_service.delete_brand(session, brand_id)
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Brand not found")
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

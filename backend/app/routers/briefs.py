@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session
@@ -55,11 +55,12 @@ async def update_brief(
     return BriefResponse.model_validate(brief)
 
 
-@router.delete("/{brief_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{brief_id}", status_code=status.HTTP_204_NO_CONTENT, response_model=None)
 async def delete_brief(
     brief_id: uuid.UUID,
     session: AsyncSession = Depends(get_session),
-) -> None:
+):
     deleted = await brief_service.delete_brief(session, brief_id)
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Brief not found")
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
