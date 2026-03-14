@@ -28,18 +28,21 @@ async def _save_agent_log(
     reasoning: str,
     duration_ms: int | None = None,
 ):
-    """Persist a pipeline log entry to the database immediately."""
-    async with session_factory() as session:
-        log = PipelineLog(
-            generation_id=_uuid.UUID(generation_id),
-            agent_name=agent_name,
-            iteration=iteration,
-            decision=decision,
-            reasoning=reasoning,
+    """Persist a pipeline log entry to the database immediately. Non-fatal on failure."""
+    try:
+        async with session_factory() as session:
+            log = PipelineLog(
+                generation_id=_uuid.UUID(generation_id),
+                agent_name=agent_name,
+                iteration=iteration,
+                decision=decision,
+                reasoning=reasoning,
             duration_ms=duration_ms,
         )
         session.add(log)
         await session.commit()
+    except Exception as e:
+        logger.warning(f"Failed to persist pipeline log for {agent_name}: {e}")
 
 
 async def run_pipeline(context: PipelineContext) -> PipelineContext:

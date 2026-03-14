@@ -152,4 +152,7 @@ class PipelineContext:
             data["review"] = QualityReview(**data["review"])
         data["refinement_history"] = [RefinementStep(**r) for r in data.get("refinement_history", [])]
         data["decision_log"] = [DecisionEntry(**d) for d in data.get("decision_log", [])]
-        return cls(**data)
+        # Filter to only known fields for forward/backward compatibility
+        valid_fields = {f.name for f in __import__('dataclasses').fields(cls)}
+        filtered = {k: v for k, v in data.items() if k in valid_fields}
+        return cls(**filtered)

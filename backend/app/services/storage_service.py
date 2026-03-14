@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import shutil
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from app.config import settings
@@ -13,7 +13,7 @@ def get_storage_path() -> Path:
 
 
 def _build_generation_dir(generation_id: str, brand_id: str | None = None) -> Path:
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     brand_segment = brand_id if brand_id else "no_brand"
     return (
         get_storage_path()

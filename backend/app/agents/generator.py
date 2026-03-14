@@ -16,14 +16,18 @@ def _load_reference_images(context: PipelineContext) -> list[str]:
     settings = get_settings()
     images_b64 = []
 
+    storage_root = os.path.realpath(settings.STORAGE_PATH)
+
     # Load uploaded reference images
     for ref_url in (context.brief.reference_urls or []):
         try:
-            # ref_url is like "/storage/references/ref_abc.png" or "references/ref_abc.png"
             clean_path = ref_url.lstrip("/")
             if clean_path.startswith("storage/"):
                 clean_path = clean_path[len("storage/"):]
-            file_path = os.path.join(settings.STORAGE_PATH, clean_path)
+            file_path = os.path.realpath(os.path.join(storage_root, clean_path))
+            if not file_path.startswith(storage_root):
+                logger.warning(f"Path traversal blocked: {ref_url}")
+                continue
             if os.path.isfile(file_path):
                 with open(file_path, "rb") as f:
                     img_bytes = f.read()
@@ -34,18 +38,28 @@ def _load_reference_images(context: PipelineContext) -> list[str]:
         except Exception as e:
             logger.warning(f"Failed to load reference image {ref_url}: {e}")
 
-    # Load brand logo
+    # Load brand logo (skip data: URLs — they're already base64)
     if context.brand and context.brand.logo_url:
-        try:
-            logo_path = context.brand.logo_url.lstrip("/")
-            if logo_path.startswith("storage/"):
-                logo_path = logo_path[len("storage/"):]
-            file_path = os.path.join(settings.STORAGE_PATH, logo_path)
-            if os.path.isfile(file_path):
-                with open(file_path, "rb") as f:
-                    img_bytes = f.read()
-                images_b64.append(base64.b64encode(img_bytes).decode())
-                logger.info(f"Loaded brand logo: {file_path}")
+        logo_url = context.brand.logo_url
+        if logo_url.startswith("data:"):
+            # Extract base64 from data URL
+            comma_idx = logo_url.find(",")
+            if comma_idx > 0:
+                images_b64.append(logo_url[comma_idx + 1:])
+                logger.info("Loaded brand logo from data URL")
+        else:
+            try:
+                logo_path = logo_url.lstrip("/")
+                if logo_path.startswith("storage/"):
+                    logo_path = logo_path[len("storage/"):]
+                file_path = os.path.realpath(os.path.join(storage_root, logo_path))
+                if not file_path.startswith(storage_root):
+                    logger.warning(f"Path traversal blocked for logo: {logo_url}")
+                elif os.path.isfile(file_path):
+                    with open(file_path, "rb") as f:
+                        img_bytes = f.read()
+                    images_b64.append(base64.b64encode(img_bytes).decode())
+                    logger.info(f"Loaded brand logo: {file_path}")
         except Exception as e:
             logger.warning(f"Failed to load brand logo: {e}")
 

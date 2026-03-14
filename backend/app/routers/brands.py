@@ -42,6 +42,9 @@ async def discover_brand(
     from app.services.brand_discovery import discover_brand_from_url
 
     logo_base64 = (body or {}).get("logo_base64") if body else None
+    # Limit logo size to ~10MB decoded
+    if logo_base64 and len(logo_base64) > 14_000_000:
+        raise HTTPException(status_code=400, detail="Logo too large (max 10MB)")
 
     try:
         brand_data = await discover_brand_from_url(website_url, logo_base64=logo_base64)

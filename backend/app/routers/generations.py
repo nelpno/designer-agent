@@ -158,10 +158,10 @@ async def retry_generation(
     generation = result.scalar_one_or_none()
     if not generation:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Generation not found")
-    if generation.status not in ("failed", "completed", "running", "pending"):
+    if generation.status not in ("failed", "completed"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot retry this generation",
+            detail="Can only retry failed or completed generations. Stuck generations must be marked as failed first.",
         )
 
     # Reset and re-dispatch
@@ -183,6 +183,28 @@ async def retry_generation(
     return GenerationResponse.model_validate(generation)
 
 
+@router.post("/{generation_id}/mark-failed", response_model=GenerationResponse)
+async def mark_generation_failed(
+    generation_id: uuid.UUID,
+    session: AsyncSession = Depends(get_session),
+) -> GenerationResponse:
+    """Mark a stuck generation (running/pending) as failed so it can be retried."""
+    result = await session.execute(
+        select(Generation).where(Generation.id == generation_id)
+    )
+    generation = result.scalar_one_or_none()
+    if not generation:
+        raise HTTPException(status_code=404, detail="Generation not found")
+    if generation.status not in ("running", "pending"):
+        raise HTTPException(status_code=400, detail="Only running or pending generations can be marked as failed")
+
+    generation.status = "failed"
+    generation.error_message = "Manually marked as failed (stuck)"
+    await session.commit()
+    await session.refresh(generation)
+    return GenerationResponse.model_validate(generation)
+
+
 @router.get("/{generation_id}/download")
 async def download_generation_image(
     generation_id: uuid.UUID,
@@ -199,7 +221,9 @@ async def download_generation_image(
         raise HTTPException(status_code=404, detail="Image not found")
 
     settings = get_settings()
-    file_path = os.path.join(settings.STORAGE_PATH, generation.final_image_url.lstrip("/"))
+    file_path = os.path.realpath(os.path.join(settings.STORAGE_PATH, generation.final_image_url.lstrip("/")))
+    if not file_path.startswith(os.path.realpath(settings.STORAGE_PATH)):
+        raise HTTPException(status_code=403, detail="Access denied")
     if not os.path.isfile(file_path):
         raise HTTPException(status_code=404, detail="File not found on disk")
 
