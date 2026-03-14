@@ -229,9 +229,9 @@ function BrandModal({
       const res = await apiClient.post<Record<string, unknown>>(
         `/api/brands/discover?website_url=${encodeURIComponent(form.website_url)}`
       )
-      const data = res.data
+      const data = (res.data as Record<string, unknown>).discovered as Record<string, unknown> ?? res.data
       // Pre-fill fields from discovery
-      if (data.name && !form.name) setField('name', data.name as string)
+      if (data.name) setField('name', data.name as string)
       if (Array.isArray(data.primary_colors) && data.primary_colors.length > 0)
         setField('primary_colors', data.primary_colors as string[])
       if (Array.isArray(data.secondary_colors) && data.secondary_colors.length > 0)
