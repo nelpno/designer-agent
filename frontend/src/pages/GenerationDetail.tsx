@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { apiClient, createWebSocket } from '../api/client'
+import { apiClient, createWebSocket, storageUrl } from '../api/client'
 import { Generation, GeneratedImage, GenerationStatus, PipelineLog } from '../types'
 import StatusBadge from '../components/StatusBadge'
 import ScoreBadge from '../components/ScoreBadge'
@@ -356,13 +356,13 @@ export default function GenerationDetail() {
               <div className="relative">
                 {currentImage ? (
                   <img
-                    src={currentImage.image_url}
+                    src={storageUrl(currentImage.image_url)}
                     alt="Design gerado"
                     className="w-full object-contain max-h-[600px]"
                   />
                 ) : generation.final_image_url ? (
                   <img
-                    src={generation.final_image_url}
+                    src={storageUrl(generation.final_image_url)}
                     alt="Design gerado"
                     className="w-full object-contain max-h-[600px]"
                   />

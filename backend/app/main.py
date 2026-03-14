@@ -67,6 +67,13 @@ app.include_router(generations.router)
 app.include_router(gallery.router)
 app.include_router(websocket.router)
 
+# Servir arquivos estáticos do storage (imagens geradas)
+from fastapi.staticfiles import StaticFiles
+import os
+storage_path = os.environ.get("STORAGE_PATH", "/app/storage")
+os.makedirs(storage_path, exist_ok=True)
+app.mount("/storage", StaticFiles(directory=storage_path), name="storage")
+
 
 @app.get("/health", tags=["health"])
 async def health_check() -> dict[str, str]:

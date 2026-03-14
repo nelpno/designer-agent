@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { apiClient } from '../api/client'
+import { apiClient, storageUrl } from '../api/client'
 import { Generation, GenerationStatus } from '../types'
 import StatusBadge from '../components/StatusBadge'
 import ScoreBadge from '../components/ScoreBadge'
@@ -15,7 +15,7 @@ const STATUS_FILTERS = [
 ]
 
 function ImageCard({ generation }: { generation: Generation }) {
-  const thumbnail = generation.final_image_url
+  const thumbnail = storageUrl(generation.final_image_url)
   const artType = (generation as Record<string, unknown>).art_type as string | undefined
 
   return (
