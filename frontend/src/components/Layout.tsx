@@ -1,4 +1,4 @@
-import { ReactNode } from 'react'
+import { ReactNode, useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 
 interface LayoutProps {
@@ -46,23 +46,40 @@ const navItems = [
 
 export default function Layout({ children }: LayoutProps) {
   const location = useLocation()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  // Fechar sidebar ao navegar no mobile
+  useEffect(() => {
+    setSidebarOpen(false)
+  }, [location.pathname])
 
   return (
     <div className="min-h-screen flex" style={{ background: 'var(--bg-deep)' }}>
+      {/* Overlay mobile */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/60 z-20 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
       <aside
-        className="w-64 fixed h-full z-10 flex flex-col"
+        className={`
+          w-64 fixed h-full z-30 flex flex-col transition-transform duration-300 ease-in-out
+          lg:translate-x-0
+          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        `}
         style={{
-          background: 'rgba(10, 11, 20, 0.85)',
+          background: 'rgba(10, 11, 20, 0.95)',
           backdropFilter: 'blur(24px)',
           WebkitBackdropFilter: 'blur(24px)',
           borderRight: '1px solid var(--border-subtle)',
         }}
       >
         {/* Logo */}
-        <div className="px-6 py-7" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+        <div className="px-6 py-7 flex items-center justify-between" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
           <div className="flex items-center gap-3">
-            {/* Diamond / sparkle icon */}
             <div
               className="w-9 h-9 rounded-xl flex items-center justify-center animate-sparkle"
               style={{ background: 'var(--gradient-primary)' }}
@@ -78,6 +95,15 @@ export default function Layout({ children }: LayoutProps) {
               Designer Agent
             </span>
           </div>
+          {/* Botão fechar no mobile */}
+          <button
+            className="lg:hidden p-1 rounded-lg text-[#94a3b8] hover:text-white hover:bg-white/10 transition-colors"
+            onClick={() => setSidebarOpen(false)}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
 
         {/* Nav */}
@@ -106,14 +132,12 @@ export default function Layout({ children }: LayoutProps) {
                     : {}
                 }
               >
-                {/* Active indicator — gradient left border */}
                 {isActive && (
                   <div
                     className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full"
                     style={{ background: 'var(--gradient-primary)' }}
                   />
                 )}
-
                 <span
                   className={`transition-colors duration-200 ${
                     isActive
@@ -141,7 +165,26 @@ export default function Layout({ children }: LayoutProps) {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 ml-64 overflow-auto min-h-screen">
+      <main className="flex-1 lg:ml-64 overflow-auto min-h-screen">
+        {/* Top bar mobile */}
+        <div className="lg:hidden sticky top-0 z-10 flex items-center gap-3 px-4 py-3" style={{
+          background: 'rgba(10, 11, 20, 0.9)',
+          backdropFilter: 'blur(16px)',
+          borderBottom: '1px solid var(--border-subtle)',
+        }}>
+          <button
+            className="p-2 rounded-lg text-[#94a3b8] hover:text-white hover:bg-white/10 transition-colors"
+            onClick={() => setSidebarOpen(true)}
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+          <span className="font-semibold gradient-text text-sm" style={{ fontFamily: 'var(--font-heading)' }}>
+            Designer Agent
+          </span>
+        </div>
+
         <div className="max-w-7xl mx-auto">
           {children}
         </div>
