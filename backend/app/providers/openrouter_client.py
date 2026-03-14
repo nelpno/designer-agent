@@ -93,11 +93,31 @@ class OpenRouterClient:
         aspect_ratio: str = "1:1",
         image_size: str = "1K",
         additional_params: dict | None = None,
+        reference_images: list[str] | None = None,
     ) -> bytes:
-        """Generate an image via OpenRouter's image generation API. Returns raw image bytes."""
+        """Generate an image via OpenRouter's image generation API. Returns raw image bytes.
+
+        Args:
+            reference_images: list of base64-encoded image strings to use as references
+        """
+        # Build message content — text first, then reference images
+        if reference_images:
+            content = [{"type": "text", "text": prompt}]
+            for img_b64 in reference_images:
+                prefix = img_b64[:20]
+                if not prefix.startswith("data:"):
+                    img_b64 = f"data:image/png;base64,{img_b64}"
+                content.append({
+                    "type": "image_url",
+                    "image_url": {"url": img_b64},
+                })
+            user_message = {"role": "user", "content": content}
+        else:
+            user_message = {"role": "user", "content": prompt}
+
         payload = {
             "model": model,
-            "messages": [{"role": "user", "content": prompt}],
+            "messages": [user_message],
             "modalities": ["image"],
             "image_config": {
                 "aspect_ratio": aspect_ratio,

@@ -1,10 +1,55 @@
+import base64
 import logging
+import os
+
 from app.agents.base_agent import BaseAgent
 from app.agents.context import PipelineContext, GeneratedImage
 from app.services.storage_service import save_image, save_thumbnail
 from app.providers.model_router import get_fallback_model
+from app.config import get_settings
 
 logger = logging.getLogger(__name__)
+
+
+def _load_reference_images(context: PipelineContext) -> list[str]:
+    """Load reference images and brand logo as base64 strings."""
+    settings = get_settings()
+    images_b64 = []
+
+    # Load uploaded reference images
+    for ref_url in (context.brief.reference_urls or []):
+        try:
+            # ref_url is like "/storage/references/ref_abc.png" or "references/ref_abc.png"
+            clean_path = ref_url.lstrip("/")
+            if clean_path.startswith("storage/"):
+                clean_path = clean_path[len("storage/"):]
+            file_path = os.path.join(settings.STORAGE_PATH, clean_path)
+            if os.path.isfile(file_path):
+                with open(file_path, "rb") as f:
+                    img_bytes = f.read()
+                images_b64.append(base64.b64encode(img_bytes).decode())
+                logger.info(f"Loaded reference image: {file_path}")
+            else:
+                logger.warning(f"Reference image not found: {file_path}")
+        except Exception as e:
+            logger.warning(f"Failed to load reference image {ref_url}: {e}")
+
+    # Load brand logo
+    if context.brand and context.brand.logo_url:
+        try:
+            logo_path = context.brand.logo_url.lstrip("/")
+            if logo_path.startswith("storage/"):
+                logo_path = logo_path[len("storage/"):]
+            file_path = os.path.join(settings.STORAGE_PATH, logo_path)
+            if os.path.isfile(file_path):
+                with open(file_path, "rb") as f:
+                    img_bytes = f.read()
+                images_b64.append(base64.b64encode(img_bytes).decode())
+                logger.info(f"Loaded brand logo: {file_path}")
+        except Exception as e:
+            logger.warning(f"Failed to load brand logo: {e}")
+
+    return images_b64
 
 
 class GeneratorAgent(BaseAgent):
@@ -15,6 +60,15 @@ class GeneratorAgent(BaseAgent):
         if not prompt:
             raise ValueError("No generation prompt in context")
 
+        # Load reference images (uploads + brand logo)
+        reference_images = _load_reference_images(context)
+        if reference_images:
+            context.log_decision(
+                agent_name=self.name,
+                decision=f"Loaded {len(reference_images)} reference image(s)",
+                reasoning="Sending reference images to the model for visual context",
+            )
+
         # Try primary model
         try:
             image_bytes = await self.client.generate_image(
@@ -23,6 +77,7 @@ class GeneratorAgent(BaseAgent):
                 aspect_ratio=prompt.aspect_ratio,
                 image_size=prompt.image_size,
                 additional_params=prompt.additional_params if prompt.additional_params else None,
+                reference_images=reference_images or None,
             )
         except Exception as e:
             logger.warning(f"Primary model {prompt.selected_model} failed: {e}. Trying fallback.")
@@ -41,6 +96,7 @@ class GeneratorAgent(BaseAgent):
                 prompt=prompt.main_prompt,
                 aspect_ratio=prompt.aspect_ratio,
                 image_size=prompt.image_size,
+                reference_images=reference_images or None,
             )
             prompt.selected_model = fallback_model  # Update for tracking
 

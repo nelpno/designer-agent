@@ -82,39 +82,24 @@ class PromptEngineerAgent(BaseAgent):
     def _gemini_system_prompt(self) -> str:
         return """You are a Prompt Engineer specializing in Google Gemini image generation.
 
-Gemini models respond best to JSON-structured prompts. Your job is to produce the most effective structured prompt.
+Your job is to produce a rich, descriptive image generation prompt.
 
 Output a JSON object with these fields:
 {
-    "main_prompt": "<the JSON-structured image generation prompt as a string — see format below>",
+    "main_prompt": "the detailed image generation prompt as natural language",
     "negative_prompt": "what to avoid, comma-separated"
 }
 
-The main_prompt value MUST be a JSON-structured string following this schema:
-{
-    "subject": "detailed description of the main subject",
-    "composition": "framing, angle, element positions, visual hierarchy",
-    "style": "specific artistic or photographic style",
-    "lighting": "type, direction, quality of light",
-    "color_palette": ["#hex1", "#hex2", "#hex3"],
-    "mood": "emotional tone",
-    "background": "background description",
-    "text_overlay": {
-        "headline": "exact text in quotes",
-        "body": "exact text in quotes",
-        "cta": "exact text in quotes",
-        "style": "font weight, color, size, position"
-    },
-    "brand_elements": "logo placement, brand visual elements",
-    "technical": "resolution, quality descriptors"
-}
-
-CRITICAL RULES for Gemini:
-- ALL text that must appear in the image MUST be in double quotes inside text_overlay
-- Use HEX color codes (e.g., #FF5733), not color names. Associate colors with specific elements.
-- Be extremely specific about composition: "top-third", "bottom-right corner", "centered with 20% padding"
-- Use photographic/cinematographic language: "85mm f/1.4 lens", "three-point softbox lighting"
-- The main_prompt should be the JSON object serialized as a string
+CRITICAL RULES for the main_prompt:
+- Write a rich natural language description of the FINAL IMAGE the viewer should see
+- ALL text that must appear in the image MUST be in double quotes: "Auditoria Grátis"
+- Use HEX color codes associated to elements: "a #FF5733 call-to-action button"
+- Describe composition naturally: "headline at the top third, CTA button centered below, logo in the bottom-right corner"
+- Use photographic language: "clean studio lighting", "soft gradient background"
+- NEVER include technical measurements (px, %, rem, pt) — these get rendered as visible text
+- NEVER include wireframe annotations, dimension markers, or spacing specifications
+- NEVER describe the image as a "design specification" or "layout blueprint"
+- The prompt must describe what the FINISHED design looks like, not how to build it
 - Output valid JSON only, no markdown."""
 
     def _flux_system_prompt(self) -> str:
@@ -209,6 +194,18 @@ Guidelines:
                 parts.append(f"- Don't: {', '.join(brand.dont_rules)}")
             if brand.logo_url:
                 parts.append(f"- Logo: The brand has a logo. Include it naturally in the design (typically bottom corner or as a watermark).")
+
+        # Reference images info
+        has_refs = bool(brief.reference_urls)
+        has_logo = bool(brand and brand.logo_url)
+        if has_refs or has_logo:
+            parts.append("\n## Reference Images (will be sent to the model)")
+            if has_refs:
+                parts.append(f"- {len(brief.reference_urls)} reference image(s) uploaded by the user will be sent alongside your prompt")
+                parts.append("- Your prompt should instruct the model to use these references as visual inspiration for style, layout, or product appearance")
+            if has_logo:
+                parts.append("- The brand logo will be sent as a reference image")
+                parts.append("- Your prompt should instruct the model to incorporate the logo naturally in the design")
 
         parts.append(f"\nProduce the best possible prompt for {selected_model}, following the format rules in your system instructions.")
 
