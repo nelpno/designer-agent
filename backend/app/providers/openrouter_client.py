@@ -151,8 +151,16 @@ class OpenRouterClient:
             img = message["images"][0]
             if isinstance(img, str):
                 return _decode_data_url(img)
-            elif isinstance(img, dict) and img.get("url"):
-                return _decode_data_url(img["url"])
+            elif isinstance(img, dict):
+                # {type: "image_url", image_url: {url: "data:..."}}
+                if isinstance(img.get("image_url"), dict) and img["image_url"].get("url"):
+                    return _decode_data_url(img["image_url"]["url"])
+                # {url: "data:..."}
+                if img.get("url"):
+                    return _decode_data_url(img["url"])
+                # {b64_json: "..."}
+                if img.get("b64_json"):
+                    return base64.b64decode(img["b64_json"])
 
         raise ValueError(f"Could not extract image from response: {json.dumps(data)[:500]}")
 
