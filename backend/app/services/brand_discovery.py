@@ -130,10 +130,15 @@ HTML Content (cleaned):
                 {"role": "user", "content": user_prompt},
             ],
             temperature=0.3,
-            response_format={"type": "json_object"},
         )
 
-        brand_data = json.loads(response_text)
+        # Extract JSON from response (may be wrapped in markdown code blocks)
+        text = response_text.strip()
+        if text.startswith("```"):
+            text = re.sub(r'^```(?:json)?\s*', '', text)
+            text = re.sub(r'\s*```$', '', text)
+
+        brand_data = json.loads(text)
         return brand_data
     finally:
         await client.close()
