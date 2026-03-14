@@ -315,21 +315,8 @@ export default function GenerationDetail() {
             )}
             {generation.status === GenerationStatus.COMPLETED && (
               <button
-                onClick={async () => {
-                  const imageUrl = currentImage?.image_url || generation.final_image_url
-                  if (!imageUrl) return
-                  try {
-                    const res = await fetch(storageUrl(imageUrl))
-                    const blob = await res.blob()
-                    const url = URL.createObjectURL(blob)
-                    const link = document.createElement('a')
-                    link.href = url
-                    link.download = `design-${id?.slice(0, 8)}.png`
-                    link.click()
-                    URL.revokeObjectURL(url)
-                  } catch {
-                    window.open(storageUrl(imageUrl), '_blank')
-                  }
+                onClick={() => {
+                  window.location.href = `${import.meta.env.VITE_API_URL ?? 'http://localhost:8000'}/api/generations/${id}/download`
                 }}
                 className="flex items-center gap-2 px-4 py-2 bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.06] text-white rounded-xl text-sm font-medium transition-all"
               >

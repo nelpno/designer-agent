@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import os
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -179,3 +181,31 @@ async def retry_generation(
 
     await session.refresh(generation)
     return GenerationResponse.model_validate(generation)
+
+
+@router.get("/{generation_id}/download")
+async def download_generation_image(
+    generation_id: uuid.UUID,
+    session: AsyncSession = Depends(get_session),
+):
+    """Download the final image with Content-Disposition: attachment."""
+    from app.config import get_settings
+
+    result = await session.execute(
+        select(Generation).where(Generation.id == generation_id)
+    )
+    generation = result.scalar_one_or_none()
+    if not generation or not generation.final_image_url:
+        raise HTTPException(status_code=404, detail="Image not found")
+
+    settings = get_settings()
+    file_path = os.path.join(settings.STORAGE_PATH, generation.final_image_url.lstrip("/"))
+    if not os.path.isfile(file_path):
+        raise HTTPException(status_code=404, detail="File not found on disk")
+
+    filename = f"design-{str(generation_id)[:8]}.png"
+    return FileResponse(
+        path=file_path,
+        filename=filename,
+        media_type="image/png",
+    )
