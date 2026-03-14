@@ -18,9 +18,11 @@ class OpenRouterClient:
                 "Authorization": f"Bearer {self.api_key}",
                 "Content-Type": "application/json",
                 "HTTP-Referer": "https://designer-agent.local",
-                "X-Title": "Designer Agent"
+                "X-Title": "Designer Agent",
+                "Connection": "keep-alive",
             },
-            timeout=120.0
+            timeout=120.0,
+            http2=True,
         )
 
     async def chat(

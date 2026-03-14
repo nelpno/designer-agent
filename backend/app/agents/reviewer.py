@@ -55,12 +55,13 @@ class ReviewerAgent(BaseAgent):
             {"role": "user", "content": user_prompt},
         ]
 
-        # Call vision LLM
+        # Call vision LLM (reduced max_tokens — output is ~300 tokens JSON)
         response = await self.client.chat_with_vision(
             model=settings.VISION_MODEL,
             messages=messages,
             image_base64=image_base64,
             temperature=0.3,
+            max_tokens=1024,
         )
 
         # Strip markdown code blocks if present

@@ -48,11 +48,12 @@ Guidelines:
             {"role": "user", "content": user_prompt},
         ]
 
-        # Call LLM via OpenRouter
+        # Use fast model for creative direction (structured task, Haiku is sufficient)
         response = await self.client.chat(
-            model=settings.LLM_MODEL,
+            model=settings.LLM_MODEL_FAST,
             messages=messages,
             temperature=0.7,
+            max_tokens=1024,
         )
 
         # Parse response — strip markdown code blocks if present

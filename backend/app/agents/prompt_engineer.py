@@ -52,11 +52,12 @@ class PromptEngineerAgent(BaseAgent):
             {"role": "user", "content": user_prompt},
         ]
 
-        # Call LLM to build the optimized prompt
+        # Call LLM to build the optimized prompt (reduced max_tokens — output is ~300 tokens JSON)
         response = await self.client.chat(
             model=settings.LLM_MODEL,
             messages=messages,
             temperature=0.6,
+            max_tokens=1024,
         )
 
         # Strip markdown code blocks if present
