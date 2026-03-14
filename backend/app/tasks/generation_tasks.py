@@ -3,7 +3,6 @@ import uuid as _uuid
 
 from app.tasks.celery_app import celery_app
 from app.agents.orchestrator import run_pipeline
-from app.database import AsyncSessionLocal
 from app.models.generation import Generation
 from sqlalchemy import select
 
@@ -22,20 +21,45 @@ def generate_art_task(self, generation_id: str, pipeline_context_dict: dict):
         loop.close()
 
 
+async def _get_session():
+    """Create a fresh async engine + session for this event loop (Celery worker)."""
+    from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+    from sqlalchemy.orm import sessionmaker
+    from app.config import get_settings
+
+    settings = get_settings()
+    engine = create_async_engine(settings.DATABASE_URL, echo=False)
+    session_factory = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    session = session_factory()
+    try:
+        yield session
+    finally:
+        await session.close()
+        await engine.dispose()
+
+
 async def _run_pipeline_async(generation_id: str, context_dict: dict, task):
     """Async wrapper for the pipeline."""
     from app.agents.context import PipelineContext
+    from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+    from sqlalchemy.orm import sessionmaker
+    from app.config import get_settings
     from datetime import datetime, timezone
 
+    settings = get_settings()
+    engine = create_async_engine(settings.DATABASE_URL, echo=False)
+    SessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
     context = None
+    gen_uuid = _uuid.UUID(generation_id)
 
     try:
         context = PipelineContext.from_dict(context_dict)
 
         # Update generation status to running
-        async with AsyncSessionLocal() as session:
+        async with SessionLocal() as session:
             result = await session.execute(
-                select(Generation).where(Generation.id == _uuid.UUID(generation_id))
+                select(Generation).where(Generation.id == gen_uuid)
             )
             generation = result.scalar_one_or_none()
             if generation:
@@ -47,9 +71,9 @@ async def _run_pipeline_async(generation_id: str, context_dict: dict, task):
         context = await run_pipeline(context)
 
         # Update generation with results
-        async with AsyncSessionLocal() as session:
+        async with SessionLocal() as session:
             result = await session.execute(
-                select(Generation).where(Generation.id == _uuid.UUID(generation_id))
+                select(Generation).where(Generation.id == gen_uuid)
             )
             generation = result.scalar_one_or_none()
             if generation:
@@ -70,18 +94,23 @@ async def _run_pipeline_async(generation_id: str, context_dict: dict, task):
         return {"status": "completed", "generation_id": generation_id}
 
     except Exception as e:
-        # Update generation as failed
-        async with AsyncSessionLocal() as session:
-            result = await session.execute(
-                select(Generation).where(Generation.id == _uuid.UUID(generation_id))
-            )
-            generation = result.scalar_one_or_none()
-            if generation:
-                generation.status = "failed"
-                generation.error_message = str(e)
-                if context is not None:
-                    generation.pipeline_context = context.to_dict()
-                generation.completed_at = datetime.now(timezone.utc)
-                await session.commit()
+        try:
+            async with SessionLocal() as session:
+                result = await session.execute(
+                    select(Generation).where(Generation.id == gen_uuid)
+                )
+                generation = result.scalar_one_or_none()
+                if generation:
+                    generation.status = "failed"
+                    generation.error_message = str(e)
+                    if context is not None:
+                        generation.pipeline_context = context.to_dict()
+                    generation.completed_at = datetime.now(timezone.utc)
+                    await session.commit()
+        except Exception:
+            pass  # Don't crash the error handler
 
         return {"status": "failed", "error": str(e), "generation_id": generation_id}
+
+    finally:
+        await engine.dispose()
