@@ -7,6 +7,7 @@ celery_app = Celery(
     "designer_agent",
     broker=settings.REDIS_URL,
     backend=settings.REDIS_URL,
+    include=["app.tasks.generation_tasks"],
 )
 
 celery_app.conf.update(
