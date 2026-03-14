@@ -105,6 +105,7 @@ class PipelineContext:
     brief_id: str
     brief: BriefData
     brand: BrandGuidelines | None = None
+    generation_id: str | None = None  # unique per generation (used for storage paths)
 
     # Agent outputs (populated as pipeline progresses)
     creative_direction: CreativeDirection | None = None

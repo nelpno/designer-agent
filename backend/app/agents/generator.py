@@ -44,11 +44,12 @@ class GeneratorAgent(BaseAgent):
             )
             prompt.selected_model = fallback_model  # Update for tracking
 
-        # Save image to storage
+        # Save image to storage (use generation_id so each generation has its own folder)
         brand_id = context.brand.id if context.brand else None
+        storage_id = context.generation_id or context.brief_id
         image_url = await save_image(
             image_data=image_bytes,
-            generation_id=context.brief_id,
+            generation_id=storage_id,
             filename=f"gen_iter{context.iteration}.png",
             brand_id=brand_id,
         )
@@ -56,7 +57,7 @@ class GeneratorAgent(BaseAgent):
         # Save thumbnail
         thumbnail_url = await save_thumbnail(
             image_data=image_bytes,
-            generation_id=context.brief_id,
+            generation_id=storage_id,
             brand_id=brand_id,
         )
 

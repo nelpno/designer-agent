@@ -82,6 +82,11 @@ async def start_generation(
     await session.commit()
     await session.refresh(generation)
 
+    # Set generation_id in context so storage paths are unique per generation
+    pipeline_context.generation_id = str(generation.id)
+    generation.pipeline_context = pipeline_context.to_dict()
+    await session.commit()
+
     # Dispatch Celery task
     generate_art_task.delay(str(generation.id), pipeline_context.to_dict())
 
@@ -162,6 +167,12 @@ async def retry_generation(
     generation.error_message = None
     generation.started_at = None
     generation.completed_at = None
+
+    # Ensure generation_id is in the pipeline context
+    ctx = dict(generation.pipeline_context or {})
+    ctx["generation_id"] = str(generation.id)
+    generation.pipeline_context = ctx
+
     await session.commit()
 
     generate_art_task.delay(str(generation.id), generation.pipeline_context)
