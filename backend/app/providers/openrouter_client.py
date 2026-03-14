@@ -112,30 +112,47 @@ class OpenRouterClient:
         data = response.json()
 
         # Extract base64 image from response
-        content = data["choices"][0]["message"]["content"]
+        message = data["choices"][0]["message"]
+        content = message.get("content")
 
-        # OpenRouter returns images as base64 data URLs in the content
-        # Format: data:image/png;base64,<base64_data>
-        # or as items in an "images" field
+        # Helper to extract base64 from a data URL string
+        def _decode_data_url(url: str) -> bytes:
+            if "," in url:
+                return base64.b64decode(url.split(",", 1)[1])
+            return base64.b64decode(url)
+
+        # Format 1: content is a list of items (multimodal response)
         if isinstance(content, list):
             for item in content:
-                if isinstance(item, dict) and item.get("type") == "image_url":
-                    b64_url = item["image_url"]["url"]
-                    b64_data = b64_url.split(",", 1)[1]
-                    return base64.b64decode(b64_data)
-        elif isinstance(content, str) and content.startswith("data:image"):
-            b64_data = content.split(",", 1)[1]
-            return base64.b64decode(b64_data)
+                if isinstance(item, dict):
+                    # {type: "image_url", image_url: {url: "data:..."}}
+                    if item.get("type") == "image_url" and isinstance(item.get("image_url"), dict):
+                        return _decode_data_url(item["image_url"]["url"])
+                    # {type: "image", url: "data:..."}
+                    if item.get("type") == "image" and isinstance(item.get("url"), str):
+                        return _decode_data_url(item["url"])
+                    # {b64_json: "..."} or {data: "..."}
+                    if item.get("b64_json"):
+                        return base64.b64decode(item["b64_json"])
 
-        # Try images field
-        message = data["choices"][0]["message"]
+        # Format 2: content is a string (data URL)
+        elif isinstance(content, str) and "base64" in content:
+            return _decode_data_url(content)
+
+        # Format 3: content is a dict with image data
+        elif isinstance(content, dict):
+            if content.get("url"):
+                return _decode_data_url(content["url"])
+            if content.get("b64_json"):
+                return base64.b64decode(content["b64_json"])
+
+        # Format 4: images field on the message
         if "images" in message:
-            b64_url = message["images"][0]
-            if b64_url.startswith("data:"):
-                b64_data = b64_url.split(",", 1)[1]
-            else:
-                b64_data = b64_url
-            return base64.b64decode(b64_data)
+            img = message["images"][0]
+            if isinstance(img, str):
+                return _decode_data_url(img)
+            elif isinstance(img, dict) and img.get("url"):
+                return _decode_data_url(img["url"])
 
         raise ValueError(f"Could not extract image from response: {json.dumps(data)[:500]}")
 
