@@ -1,6 +1,6 @@
 # Designer Agent
 
-## Status: Em produção (v1.0) — 15 commits, 80+ arquivos
+## Status: Em produção (v1.1) — 29 commits, 56 arquivos de código
 
 ## URLs
 - **Frontend**: http://82.29.60.220:8086 (direto)
@@ -15,7 +15,7 @@ Plataforma interna de geração de artes estáticas com IA. Pipeline de 5 agente
 
 ## Stack
 - **Backend**: Python 3.12 FastAPI + Celery + Redis
-- **Frontend**: React 19 + Vite 6 + Tailwind 3 (fontes Sora + DM Sans, glassmorphism dark theme)
+- **Frontend**: React 19 + Vite 6 + Tailwind 3 (fontes Sora + DM Sans, dark theme sólido)
 - **DB**: PostgreSQL 14 (compartilhado na nelsonNet, database `designer_agent`, user `designer`)
 - **IA**: OpenRouter (API única) — LLMs para agentes + geração de imagem
 - **Infra**: Docker Swarm via Portainer, rede nelsonNet
@@ -44,11 +44,15 @@ Plataforma interna de geração de artes estáticas com IA. Pipeline de 5 agente
 ## Features
 - **Pipeline 5 Agentes**: Creative Director → Prompt Engineer → Generator → Reviewer → Refiner
 - **Quality Loop**: Reviewer avalia (score 0-100), Refiner corrige, até 3 iterações
-- **Brand Discovery**: IA analisa site do cliente e preenche guidelines automaticamente
+- **Brand Discovery**: IA analisa site, Instagram, about pages e logo via vision — output em PT-BR
 - **Sugestão de Textos com IA**: sugere título, texto e CTA baseado na descrição
-- **Upload de Referências**: drag-and-drop de imagens de referência
-- **Upload de Logo**: na gestão de marcas
+- **Upload de Referências**: drag-and-drop de imagens de referência (enviadas ao modelo como base64)
+- **Upload de Logo**: na gestão de marcas (suporta data URL e arquivo)
 - **Model Router**: seleção automática do melhor modelo por tipo de arte
+- **Prompts por Modelo**: JSON estruturado (Gemini), linguagem natural (FLUX), texto entre aspas
+- **Enriquecimento de Descrição**: Creative Director auto-melhora descrições fracas
+- **Pipeline em Tempo Real**: logs persistidos após cada agente, frontend poll 3s
+- **Download de Imagens**: endpoint dedicado com Content-Disposition attachment
 - **WebSocket**: updates em tempo real do pipeline
 - **API Docs**: Swagger em /docs com documentação completa
 - **Sidebar Responsiva**: hamburger menu no mobile
@@ -76,9 +80,10 @@ frontend/src/
 
 ## Deploy
 1. `git push origin main` — código vai para GitHub
-2. Restart serviços no Portainer (ou via API)
+2. Restart via API: `POST stop + POST start` em `https://porto.dynamicagents.tech/api/stacks/32/{stop|start}?endpointId=1`
 3. Containers clonam repo do GitHub na inicialização (~3 min para ficar pronto)
 4. Portas: backend=8085, frontend=8086
+5. NUNCA dar restart com gerações em andamento — worker morre e geração fica travada
 
 ## Convenções
 - Python: async/await, type hints, Pydantic v2
@@ -88,6 +93,12 @@ frontend/src/
 - Celery tasks: criar engine asyncpg NOVO por task (nunca usar o global do FastAPI)
 - Imagens: salvar em storage, servir via `/storage/`, frontend usa `storageUrl()` helper
 - OpenRouter image parsing: suportar TODOS os formatos (list, dict, string, images field com objetos)
+- Prompts Gemini: linguagem natural descritiva, NUNCA incluir medidas (px, %, rem) — aparecem na imagem
+- Prompts FLUX: linguagem natural rica, SEM negative_prompt (não suporta)
+- Security: paths de storage SEMPRE validar com `os.path.realpath` + `startswith` guard
+- Brand discovery retorna dados em `{"discovered": {...}}` — frontend acessa `.discovered`
+- Logo da marca pode ser `data:image/png;base64,...` (data URL) ou path no storage
+- Orchestrator `_save_agent_log` é non-fatal (try/except) para não matar pipeline por falha de DB
 
 ## Gotchas
 - Traefik redireciona HTTP→HTTPS globalmente. Cloudflare SSL deve estar em "Full"
@@ -96,7 +107,11 @@ frontend/src/
 - UUID: sempre converter str→uuid.UUID() antes de query no SQLAlchemy
 - Celery + asyncpg: cada task cria engine próprio (event loop separado)
 - FLUX.2 retorna images como `[{type:"image_url", image_url:{url:"data:..."}}]`
-- Gerações travadas: marcar como failed via SQL se ficarem >10min em pending/running
+- Gerações travadas: usar `POST /api/generations/{id}/mark-failed` (só running/pending), depois retry
+- Retry só funciona para status failed/completed (evitar race condition com tasks paralelas)
+- Frontend download cross-origin: precisa endpoint dedicado (atributo `download` do `<a>` não funciona entre portas)
+- PipelineContext.from_dict filtra campos desconhecidos para compatibilidade futura
+- Orchestrator + task cada um cria engine asyncpg próprio (2 engines por pipeline run)
 
 ## Credenciais (NÃO committar)
 - OpenRouter API Key: nas env vars da stack Portainer
