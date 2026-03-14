@@ -60,8 +60,8 @@ def _load_reference_images(context: PipelineContext) -> list[str]:
                         img_bytes = f.read()
                     images_b64.append(base64.b64encode(img_bytes).decode())
                     logger.info(f"Loaded brand logo: {file_path}")
-        except Exception as e:
-            logger.warning(f"Failed to load brand logo: {e}")
+            except Exception as e:
+                logger.warning(f"Failed to load brand logo: {e}")
 
     return images_b64
 
