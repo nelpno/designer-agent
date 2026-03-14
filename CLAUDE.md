@@ -1,6 +1,6 @@
 # Artisan
 
-## Status: Em produção (v1.2) — 35 commits
+## Status: Em produção (v1.3) — 38 commits
 
 ## URLs
 - **Frontend**: http://82.29.60.220:8086 (direto)
@@ -58,7 +58,9 @@ Plataforma interna de geração de artes estáticas com IA chamada **Artisan**. 
 - **Fluxo Progressivo**: criação de arte em seções que revelam conforme avança (tudo-em-um)
 - **Auth Middleware**: API key opcional via `API_SECRET_KEY` env var
 - **Upload Seguro**: validação magic bytes, limite 10MB, extensão forçada
-- **Sidebar Responsiva**: hamburger menu no mobile
+- **Sidebar Responsiva**: hamburger menu no mobile, touch targets 44px
+- **Pipeline Visual**: nomes dos agentes (Creative Director, etc.), duração human-readable, raciocínio expansível
+- **Mobile Otimizado**: stats 2 colunas, art types 2 colunas, padding responsivo, stack vertical
 
 ## Design System — Artisan
 - **Nome**: Artisan (logo ❖ com gradiente verde→ciano)
@@ -105,6 +107,9 @@ frontend/src/
 - Frontend: TypeScript, Tailwind, tudo em Português Brasileiro
 - Frontend: TODAS as cores via CSS variables (var(--bg-primary), var(--text-primary), etc.) — NUNCA hardcoded hex
 - Frontend: "Nova Arte" (não "Novo Brief"), "Artisan" (não "Designer Agent")
+- Frontend: fluxo progressivo ordem — Marca → Tipo → Descrição → Textos → Gerar (descrição antes de textos para IA sugerir melhor)
+- Frontend: Pipeline mostra nomes dos agentes (Creative Director, não "Etapa 1"), duração como "1min 18s" (não "78.1s")
+- Frontend: NÃO duplicar informação — sidebar de detalhes não repete logs do Pipeline
 - API: REST, prefixo `/api/`
 - Agentes: NÃO usar `response_format={"type": "json_object"}` — fazer strip de markdown code blocks antes de json.loads()
 - Celery tasks: criar engine asyncpg NOVO por task (nunca usar o global do FastAPI)
