@@ -11,7 +11,7 @@ const navItems = [
     label: 'Painel',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 5a1 1 0 011-1h4a1 1 0 011 1v5a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm10 0a1 1 0 011-1h4a1 1 0 011 1v2a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zm0 6a1 1 0 011-1h4a1 1 0 011 1v7a1 1 0 01-1 1h-4a1 1 0 01-1-1v-7zM4 13a1 1 0 011-1h4a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6z" />
       </svg>
     ),
   },
@@ -20,7 +20,7 @@ const navItems = [
     label: 'Novo Brief',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
     ),
   },
@@ -29,7 +29,7 @@ const navItems = [
     label: 'Galeria',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
       </svg>
     ),
   },
@@ -38,7 +38,7 @@ const navItems = [
     label: 'Marcas',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
       </svg>
     ),
   },
@@ -48,23 +48,40 @@ export default function Layout({ children }: LayoutProps) {
   const location = useLocation()
 
   return (
-    <div className="min-h-screen bg-gray-900 flex">
+    <div className="min-h-screen flex" style={{ background: 'var(--bg-deep)' }}>
       {/* Sidebar */}
-      <aside className="w-64 bg-gray-950 border-r border-gray-800 flex flex-col fixed h-full z-10">
+      <aside
+        className="w-64 fixed h-full z-10 flex flex-col"
+        style={{
+          background: 'rgba(10, 11, 20, 0.85)',
+          backdropFilter: 'blur(24px)',
+          WebkitBackdropFilter: 'blur(24px)',
+          borderRight: '1px solid var(--border-subtle)',
+        }}
+      >
         {/* Logo */}
-        <div className="p-6 border-b border-gray-800">
+        <div className="px-6 py-7" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
-              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+            {/* Diamond / sparkle icon */}
+            <div
+              className="w-9 h-9 rounded-xl flex items-center justify-center animate-sparkle"
+              style={{ background: 'var(--gradient-primary)' }}
+            >
+              <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 1l3 8h8l-6.5 5 2.5 8L12 16.5 5 22l2.5-8L1 9h8l3-8z" />
               </svg>
             </div>
-            <span className="text-white font-bold text-lg">Designer Agent</span>
+            <span
+              className="font-bold text-lg gradient-text"
+              style={{ fontFamily: 'var(--font-heading)' }}
+            >
+              Designer Agent
+            </span>
           </div>
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 p-4 space-y-1">
+        <nav className="flex-1 px-3 py-5 space-y-1">
           {navItems.map((item) => {
             const isActive =
               item.path === '/'
@@ -75,13 +92,37 @@ export default function Layout({ children }: LayoutProps) {
               <Link
                 key={item.path}
                 to={item.path}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                className={`group flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 relative ${
                   isActive
-                    ? 'bg-indigo-600 text-white'
-                    : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                    ? 'text-white'
+                    : 'text-[#94a3b8] hover:text-white'
                 }`}
+                style={
+                  isActive
+                    ? {
+                        background: 'rgba(124, 58, 237, 0.12)',
+                        boxShadow: 'inset 0 0 20px rgba(124, 58, 237, 0.06)',
+                      }
+                    : {}
+                }
               >
-                {item.icon}
+                {/* Active indicator — gradient left border */}
+                {isActive && (
+                  <div
+                    className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full"
+                    style={{ background: 'var(--gradient-primary)' }}
+                  />
+                )}
+
+                <span
+                  className={`transition-colors duration-200 ${
+                    isActive
+                      ? 'text-[#c084fc]'
+                      : 'text-[#64748b] group-hover:text-[#94a3b8]'
+                  }`}
+                >
+                  {item.icon}
+                </span>
                 {item.label}
               </Link>
             )
@@ -89,13 +130,22 @@ export default function Layout({ children }: LayoutProps) {
         </nav>
 
         {/* Footer */}
-        <div className="p-4 border-t border-gray-800">
-          <p className="text-xs text-gray-600 text-center">Designer Agent v1.0</p>
+        <div className="px-6 py-5" style={{ borderTop: '1px solid var(--border-subtle)' }}>
+          <p
+            className="text-xs text-center"
+            style={{ color: 'var(--text-very-muted)', fontFamily: 'var(--font-body)' }}
+          >
+            v1.0 — Powered by AI
+          </p>
         </div>
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 ml-64 overflow-auto">{children}</main>
+      <main className="flex-1 ml-64 overflow-auto min-h-screen">
+        <div className="max-w-7xl mx-auto">
+          {children}
+        </div>
+      </main>
     </div>
   )
 }

@@ -15,41 +15,61 @@ interface DecisionLogEntry {
   status?: 'success' | 'warning' | 'error' | 'info'
 }
 
-function stepColor(status?: string) {
+function stepDotColor(status?: string) {
   switch (status) {
-    case 'success':
-      return 'border-green-500/50 bg-green-500/5'
-    case 'warning':
-      return 'border-yellow-500/50 bg-yellow-500/5'
-    case 'error':
-      return 'border-red-500/50 bg-red-500/5'
-    default:
-      return 'border-gray-600 bg-gray-800'
+    case 'success': return 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]'
+    case 'warning': return 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]'
+    case 'error': return 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]'
+    default: return 'bg-slate-500'
   }
 }
 
-function stepDotColor(status?: string) {
+function stepCardStyle(status?: string) {
   switch (status) {
-    case 'success':
-      return 'bg-green-500'
-    case 'warning':
-      return 'bg-yellow-500'
-    case 'error':
-      return 'bg-red-500'
-    default:
-      return 'bg-gray-500'
+    case 'success': return 'border-emerald-500/20 bg-emerald-500/[0.03]'
+    case 'warning': return 'border-amber-500/20 bg-amber-500/[0.03]'
+    case 'error': return 'border-rose-500/20 bg-rose-500/[0.03]'
+    default: return 'border-white/[0.06] bg-white/[0.02]'
   }
+}
+
+function stepAgentIcon(agent?: string) {
+  const name = (agent ?? '').toLowerCase()
+  if (name.includes('prompt') || name.includes('writer')) {
+    return (
+      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+      </svg>
+    )
+  }
+  if (name.includes('review') || name.includes('critic') || name.includes('score')) {
+    return (
+      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    )
+  }
+  if (name.includes('generat') || name.includes('image') || name.includes('render')) {
+    return (
+      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+      </svg>
+    )
+  }
+  return (
+    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+    </svg>
+  )
 }
 
 function PipelineTrace({ logs, pipelineContext }: { logs: PipelineLog[]; pipelineContext?: Record<string, unknown> }) {
-  // Try to extract decision_log from pipeline_context
   const decisionLog: DecisionLogEntry[] = Array.isArray(
     (pipelineContext as Record<string, unknown>)?.decision_log
   )
     ? ((pipelineContext as Record<string, unknown>).decision_log as DecisionLogEntry[])
     : []
 
-  // Fall back to pipeline logs if no decision_log
   const steps = decisionLog.length > 0 ? decisionLog : logs.map((l) => ({
     agent: l.agent_name,
     step: l.agent_name,
@@ -61,7 +81,7 @@ function PipelineTrace({ logs, pipelineContext }: { logs: PipelineLog[]; pipelin
 
   if (steps.length === 0) {
     return (
-      <div className="text-center py-8 text-gray-600 text-sm">
+      <div className="text-center py-8 text-slate-600 text-sm">
         Nenhum pipeline disponível ainda
       </div>
     )
@@ -70,55 +90,54 @@ function PipelineTrace({ logs, pipelineContext }: { logs: PipelineLog[]; pipelin
   return (
     <div className="relative">
       {/* Vertical line */}
-      <div className="absolute left-4 top-0 bottom-0 w-px bg-gray-700" />
+      <div className="absolute left-[15px] top-3 bottom-3 w-px bg-gradient-to-b from-violet-500/30 via-white/[0.06] to-transparent" />
 
-      <div className="space-y-4">
+      <div className="space-y-3">
         {steps.map((step, idx) => (
-          <div key={idx} className="relative pl-12">
+          <div key={idx} className="relative pl-10">
             {/* Dot */}
-            <div
-              className={`absolute left-2.5 top-3 w-3 h-3 rounded-full border-2 border-gray-900 ${stepDotColor(step.status)}`}
-            />
+            <div className={`absolute left-2 top-3.5 w-2.5 h-2.5 rounded-full ${stepDotColor(step.status)}`} />
 
-            <div className={`rounded-lg border p-4 ${stepColor(step.status)}`}>
-              <div className="flex items-start justify-between gap-4 mb-1">
-                <div>
-                  <span className="text-white text-sm font-semibold">
-                    {step.agent ?? step.step ?? `Step ${idx + 1}`}
+            <div className={`rounded-xl border p-4 transition-all hover:bg-white/[0.02] ${stepCardStyle(step.status)}`}>
+              <div className="flex items-start justify-between gap-3 mb-1">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-violet-400 flex-shrink-0">
+                    {stepAgentIcon(step.agent ?? step.step)}
                   </span>
-                  {step.decision && (
-                    <p className="text-gray-300 text-sm mt-1">{step.decision}</p>
-                  )}
+                  <span className="text-white text-sm font-semibold truncate" style={{ fontFamily: 'var(--font-heading)' }}>
+                    {step.agent ?? step.step ?? `Etapa ${idx + 1}`}
+                  </span>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   {step.status && (
-                    <span
-                      className={`text-xs font-medium capitalize px-2 py-0.5 rounded-full ${
-                        step.status === 'success'
-                          ? 'bg-green-500/20 text-green-400'
-                          : step.status === 'warning'
-                          ? 'bg-yellow-500/20 text-yellow-400'
-                          : step.status === 'error'
-                          ? 'bg-red-500/20 text-red-400'
-                          : 'bg-gray-700 text-gray-400'
-                      }`}
-                    >
-                      {step.status}
+                    <span className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                      step.status === 'success'
+                        ? 'bg-emerald-500/15 text-emerald-400'
+                        : step.status === 'warning'
+                        ? 'bg-amber-500/15 text-amber-400'
+                        : step.status === 'error'
+                        ? 'bg-rose-500/15 text-rose-400'
+                        : 'bg-white/[0.06] text-slate-400'
+                    }`}>
+                      {step.status === 'success' ? 'Sucesso' : step.status === 'warning' ? 'Aviso' : step.status === 'error' ? 'Erro' : step.status}
                     </span>
                   )}
                   {step.timestamp && (
-                    <span className="text-gray-600 text-xs">
-                      {new Date(step.timestamp).toLocaleTimeString()}
+                    <span className="text-slate-600 text-[10px] font-mono">
+                      {new Date(step.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                     </span>
                   )}
                 </div>
               </div>
+              {step.decision && (
+                <p className="text-slate-300 text-sm mt-1.5 leading-relaxed">{step.decision}</p>
+              )}
               {step.reasoning && (
-                <details className="mt-2">
-                  <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-400 select-none">
+                <details className="mt-2.5">
+                  <summary className="text-xs text-violet-400/60 cursor-pointer hover:text-violet-400 select-none transition-colors">
                     Raciocínio
                   </summary>
-                  <pre className="mt-2 text-xs text-gray-400 bg-gray-900/50 rounded p-3 overflow-auto max-h-40 whitespace-pre-wrap">
+                  <pre className="mt-2 text-xs text-slate-400 bg-black/20 rounded-lg p-3 overflow-auto max-h-40 whitespace-pre-wrap border border-white/[0.04]">
                     {step.reasoning}
                   </pre>
                 </details>
@@ -162,7 +181,6 @@ export default function GenerationDetail() {
     }
   }
 
-  // WebSocket connection for real-time updates
   useEffect(() => {
     if (!id) return
 
@@ -180,21 +198,16 @@ export default function GenerationDetail() {
           setGeneration((prev) => (prev ? { ...prev, ...data } : data))
         }
       } catch {
-        // Non-JSON message, ignore
+        // Non-JSON message
       }
     }
 
-    ws.onerror = () => {
-      // WebSocket errors are non-fatal; we already have HTTP data
-    }
+    ws.onerror = () => {}
 
-    return () => {
-      ws.close()
-    }
+    return () => { ws.close() }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
-  // Poll when status is running/pending (WebSocket may not always work)
   useEffect(() => {
     if (!generation) return
     const isActive =
@@ -202,7 +215,6 @@ export default function GenerationDetail() {
       generation.status === GenerationStatus.PROCESSING
 
     if (!isActive) return
-
     const interval = setInterval(fetchGeneration, 3000)
     return () => clearInterval(interval)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -233,18 +245,17 @@ export default function GenerationDetail() {
 
   const pipelineContext = generation?.pipeline_context ?? undefined
   const currentImage = images[selectedImage]
-  // Derive prompt/negative_prompt from the final image or first image
   const finalImage = images.find((img) => img.is_final) ?? images[0]
   const promptUsed = finalImage?.prompt_used ?? null
   const negativePromptUsed = finalImage?.negative_prompt ?? null
 
   return (
-    <div className="p-8">
+    <div className="p-6 lg:p-8 max-w-[1400px] mx-auto">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
+      <div className="flex items-center gap-4 mb-6 animate-fade-in">
         <button
           onClick={() => navigate(-1)}
-          className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
+          className="p-2 text-slate-500 hover:text-white hover:bg-white/[0.06] rounded-xl transition-all"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -252,10 +263,10 @@ export default function GenerationDetail() {
         </button>
         <div className="flex-1">
           <div className="flex items-center gap-3">
-            <h1 className="text-xl font-bold text-white">Detalhe da Geração</h1>
+            <h1 className="text-2xl font-bold gradient-text tracking-tight">Detalhe da Geração</h1>
             {generation && <StatusBadge status={generation.status} />}
           </div>
-          {id && <p className="text-gray-500 text-xs mt-0.5 font-mono">{id}</p>}
+          {id && <p className="text-slate-600 text-xs mt-0.5 font-mono">{id}</p>}
         </div>
         {generation && (
           <div className="flex items-center gap-2">
@@ -263,7 +274,7 @@ export default function GenerationDetail() {
               <button
                 onClick={handleRetry}
                 disabled={retrying}
-                className="flex items-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-amber-600/90 hover:bg-amber-600 disabled:opacity-50 text-white rounded-xl text-sm font-medium transition-all"
               >
                 {retrying ? (
                   <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -281,7 +292,7 @@ export default function GenerationDetail() {
             {generation.status === GenerationStatus.COMPLETED && generation.brief_id && (
               <button
                 onClick={handleVariation}
-                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors"
+                className="btn-gradient flex items-center gap-2 text-sm"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
@@ -294,82 +305,89 @@ export default function GenerationDetail() {
       </div>
 
       {error && (
-        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm">
+        <div className="mb-6 p-4 glass-card-static border-rose-500/30 bg-rose-500/[0.06] rounded-xl text-rose-400 text-sm">
           {error}
         </div>
       )}
 
       {loading ? (
         <div className="flex gap-6">
-          <div className="flex-[3] bg-gray-800 rounded-xl aspect-square animate-pulse" />
+          <div className="flex-[3] glass-card-static rounded-xl aspect-square animate-pulse" />
           <div className="flex-[2] space-y-4">
-            <div className="h-8 bg-gray-800 rounded-xl animate-pulse" />
-            <div className="h-40 bg-gray-800 rounded-xl animate-pulse" />
-            <div className="h-60 bg-gray-800 rounded-xl animate-pulse" />
+            <div className="h-8 glass-card-static rounded-xl animate-pulse" />
+            <div className="h-40 glass-card-static rounded-xl animate-pulse" />
+            <div className="h-60 glass-card-static rounded-xl animate-pulse" />
           </div>
         </div>
       ) : !generation ? (
-        <div className="bg-gray-800 rounded-xl border border-gray-700 p-16 text-center">
-          <p className="text-gray-400">Geração não encontrada</p>
+        <div className="glass-card-static p-16 text-center">
+          <p className="text-slate-400">Geração não encontrada</p>
         </div>
       ) : (
-        <div className="flex gap-6">
+        <div className="flex flex-col lg:flex-row gap-6">
           {/* Left: Image preview */}
-          <div className="flex-[3] space-y-4">
-            {/* Main image */}
-            <div className="bg-gray-800 rounded-xl overflow-hidden border border-gray-700">
-              {currentImage ? (
-                <img
-                  src={currentImage.image_url}
-                  alt="Design gerado"
-                  className="w-full object-contain max-h-[600px]"
-                />
-              ) : generation.final_image_url ? (
-                <img
-                  src={generation.final_image_url}
-                  alt="Design gerado"
-                  className="w-full object-contain max-h-[600px]"
-                />
-              ) : generation.status === GenerationStatus.PENDING ||
-                generation.status === GenerationStatus.PROCESSING ? (
-                <div className="aspect-square flex flex-col items-center justify-center gap-4">
-                  <svg className="w-12 h-12 text-indigo-400 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                  <p className="text-gray-400 text-sm">Gerando imagem...</p>
-                </div>
-              ) : (
-                <div className="aspect-square flex items-center justify-center">
-                  <div className="text-center">
-                    <svg
-                      className="w-16 h-16 text-gray-700 mx-auto mb-3"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={1.5}
-                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                      />
-                    </svg>
-                    <p className="text-gray-500 text-sm">Nenhuma imagem gerada</p>
+          <div className="flex-[3] space-y-4 animate-slide-up">
+            {/* Main image — Glass frame */}
+            <div className="glass-card-static overflow-hidden rounded-2xl">
+              <div className="relative">
+                {currentImage ? (
+                  <img
+                    src={currentImage.image_url}
+                    alt="Design gerado"
+                    className="w-full object-contain max-h-[600px]"
+                  />
+                ) : generation.final_image_url ? (
+                  <img
+                    src={generation.final_image_url}
+                    alt="Design gerado"
+                    className="w-full object-contain max-h-[600px]"
+                  />
+                ) : generation.status === GenerationStatus.PENDING ||
+                  generation.status === GenerationStatus.PROCESSING ? (
+                  <div className="aspect-square flex flex-col items-center justify-center gap-4">
+                    <div className="relative">
+                      <div className="w-16 h-16 rounded-full border-2 border-violet-500/30 border-t-violet-500 animate-spin" />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <svg className="w-6 h-6 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                      </div>
+                    </div>
+                    <p className="text-slate-400 text-sm" style={{ fontFamily: 'var(--font-heading)' }}>Gerando imagem...</p>
                   </div>
-                </div>
-              )}
+                ) : (
+                  <div className="aspect-square flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="w-16 h-16 rounded-2xl bg-white/[0.03] flex items-center justify-center mx-auto mb-3">
+                        <svg className="w-8 h-8 text-white/[0.1]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                      <p className="text-slate-600 text-sm">Nenhuma imagem gerada</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Status overlay badge */}
+                {generation.status !== GenerationStatus.COMPLETED && (
+                  <div className="absolute top-3 left-3">
+                    <StatusBadge status={generation.status} />
+                  </div>
+                )}
+              </div>
             </div>
 
-            {/* Iteration thumbnails */}
+            {/* Iteration thumbnails strip */}
             {images.length > 1 && (
-              <div className="flex gap-2 overflow-x-auto pb-2">
+              <div className="flex gap-2 overflow-x-auto pb-1">
                 {images.map((img, idx) => (
                   <button
                     key={img.id}
                     onClick={() => setSelectedImage(idx)}
-                    className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-colors ${
-                      selectedImage === idx ? 'border-indigo-500' : 'border-gray-700 hover:border-gray-500'
+                    className={`flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border-2 transition-all ${
+                      selectedImage === idx
+                        ? 'border-violet-500 shadow-[0_0_12px_rgba(124,58,237,0.3)]'
+                        : 'border-white/[0.06] hover:border-white/[0.15] opacity-70 hover:opacity-100'
                     }`}
                   >
                     <img
@@ -383,58 +401,64 @@ export default function GenerationDetail() {
             )}
 
             {/* Pipeline Trace */}
-            <div className="bg-gray-800 rounded-xl border border-gray-700 p-6">
-              <h2 className="text-white font-semibold mb-5">Pipeline</h2>
+            <div className="glass-card-static p-6 rounded-2xl">
+              <div className="flex items-center gap-2 mb-5">
+                <div className="w-1.5 h-5 rounded-full bg-gradient-to-b from-violet-500 to-fuchsia-500" />
+                <h2 className="text-white font-semibold" style={{ fontFamily: 'var(--font-heading)' }}>Pipeline</h2>
+              </div>
               <PipelineTrace logs={logs} pipelineContext={pipelineContext} />
             </div>
           </div>
 
-          {/* Right: Details */}
-          <div className="flex-[2] space-y-4">
-            {/* Status & Meta */}
-            <div className="bg-gray-800 rounded-xl border border-gray-700 p-5">
-              <h2 className="text-white font-semibold mb-4">Detalhes</h2>
+          {/* Right: Details sidebar */}
+          <div className="flex-[2] space-y-4 animate-slide-up" style={{ animationDelay: '60ms' }}>
+            {/* Details card */}
+            <div className="glass-card-static p-5 rounded-2xl">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-1.5 h-5 rounded-full bg-gradient-to-b from-cyan-500 to-blue-500" />
+                <h2 className="text-white font-semibold" style={{ fontFamily: 'var(--font-heading)' }}>Detalhes</h2>
+              </div>
               <dl className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <dt className="text-gray-500 text-sm">Status</dt>
+                  <dt className="text-slate-500 text-sm">Status</dt>
                   <dd><StatusBadge status={generation.status} /></dd>
                 </div>
                 {generation.model_used && (
                   <div className="flex items-center justify-between">
-                    <dt className="text-gray-500 text-sm">Modelo</dt>
+                    <dt className="text-slate-500 text-sm">Modelo</dt>
                     <dd><ModelBadge model={generation.model_used} /></dd>
                   </div>
                 )}
                 {generation.final_score != null && (
                   <div className="flex items-center justify-between">
-                    <dt className="text-gray-500 text-sm">Score de Qualidade</dt>
+                    <dt className="text-slate-500 text-sm">Score</dt>
                     <dd><ScoreBadge score={generation.final_score} /></dd>
                   </div>
                 )}
                 {generation.iterations_used > 0 && (
                   <div className="flex items-center justify-between">
-                    <dt className="text-gray-500 text-sm">Iterações</dt>
-                    <dd className="text-gray-300 text-sm">{generation.iterations_used}</dd>
+                    <dt className="text-slate-500 text-sm">Iterações</dt>
+                    <dd className="text-slate-300 text-sm font-medium">{generation.iterations_used}</dd>
                   </div>
                 )}
                 {generation.total_duration_ms != null && (
                   <div className="flex items-center justify-between">
-                    <dt className="text-gray-500 text-sm">Duração</dt>
-                    <dd className="text-gray-300 text-sm">
+                    <dt className="text-slate-500 text-sm">Duração</dt>
+                    <dd className="text-slate-300 text-sm font-medium">
                       {(generation.total_duration_ms / 1000).toFixed(1)}s
                     </dd>
                   </div>
                 )}
                 <div className="flex items-center justify-between">
-                  <dt className="text-gray-500 text-sm">Criado em</dt>
-                  <dd className="text-gray-300 text-sm">
+                  <dt className="text-slate-500 text-sm">Criado em</dt>
+                  <dd className="text-slate-300 text-sm">
                     {new Date(generation.created_at).toLocaleString('pt-BR')}
                   </dd>
                 </div>
                 {generation.brief_id && (
                   <div className="flex items-center justify-between">
-                    <dt className="text-gray-500 text-sm">ID do Brief</dt>
-                    <dd className="text-gray-400 text-xs font-mono truncate max-w-[140px]">
+                    <dt className="text-slate-500 text-sm">Brief</dt>
+                    <dd className="text-slate-500 text-xs font-mono truncate max-w-[140px]">
                       {generation.brief_id}
                     </dd>
                   </div>
@@ -444,43 +468,56 @@ export default function GenerationDetail() {
 
             {/* Error message */}
             {generation.error_message && (
-              <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-5">
-                <h3 className="text-red-400 font-medium text-sm mb-2">Erro</h3>
-                <p className="text-red-300 text-sm">{generation.error_message}</p>
+              <div className="rounded-2xl border border-rose-500/20 bg-rose-500/[0.04] p-5">
+                <h3 className="text-rose-400 font-medium text-sm mb-2" style={{ fontFamily: 'var(--font-heading)' }}>Erro</h3>
+                <p className="text-rose-300/80 text-sm leading-relaxed">{generation.error_message}</p>
               </div>
             )}
 
-            {/* Prompt */}
+            {/* Prompt — Code-style box */}
             {promptUsed && (
-              <div className="bg-gray-800 rounded-xl border border-gray-700 p-5">
-                <h3 className="text-white font-semibold text-sm mb-3">Prompt Utilizado</h3>
-                <p className="text-gray-300 text-sm leading-relaxed">{promptUsed}</p>
+              <div className="glass-card-static p-5 rounded-2xl">
+                <div className="flex items-center gap-2 mb-3">
+                  <svg className="w-4 h-4 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                  </svg>
+                  <h3 className="text-white font-semibold text-sm" style={{ fontFamily: 'var(--font-heading)' }}>
+                    Prompt Utilizado
+                  </h3>
+                </div>
+                <div className="bg-black/30 rounded-xl p-4 border border-white/[0.04]">
+                  <p className="text-slate-300 text-sm leading-relaxed font-mono">{promptUsed}</p>
+                </div>
               </div>
             )}
 
             {/* Negative Prompt */}
             {negativePromptUsed && (
-              <div className="bg-gray-800 rounded-xl border border-gray-700 p-5">
-                <h3 className="text-white font-semibold text-sm mb-3">Prompt Negativo</h3>
-                <p className="text-gray-400 text-sm leading-relaxed">{negativePromptUsed}</p>
+              <div className="glass-card-static p-5 rounded-2xl">
+                <h3 className="text-white font-semibold text-sm mb-3" style={{ fontFamily: 'var(--font-heading)' }}>
+                  Prompt Negativo
+                </h3>
+                <div className="bg-black/30 rounded-xl p-4 border border-white/[0.04]">
+                  <p className="text-slate-400 text-sm leading-relaxed font-mono">{negativePromptUsed}</p>
+                </div>
               </div>
             )}
 
             {/* Raw logs */}
             {logs.length > 0 && (
-              <div className="bg-gray-800 rounded-xl border border-gray-700 p-5">
-                <h3 className="text-white font-semibold text-sm mb-3">
+              <div className="glass-card-static p-5 rounded-2xl">
+                <h3 className="text-white font-semibold text-sm mb-3" style={{ fontFamily: 'var(--font-heading)' }}>
                   Logs
-                  <span className="ml-2 text-xs text-gray-500 font-normal">({logs.length})</span>
+                  <span className="ml-2 text-xs text-slate-600 font-normal">({logs.length})</span>
                 </h3>
                 <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
                   {logs.map((log) => (
-                    <div key={log.id} className="flex items-start gap-2">
-                      <span className="text-xs mt-0.5 flex-shrink-0 font-medium text-gray-400">
+                    <div key={log.id} className="flex items-start gap-2 py-1">
+                      <span className="text-xs flex-shrink-0 font-medium text-violet-400/60">
                         {log.agent_name}
                       </span>
                       {log.decision && (
-                        <span className="text-gray-400 text-xs">{log.decision}</span>
+                        <span className="text-slate-500 text-xs">{log.decision}</span>
                       )}
                     </div>
                   ))}
