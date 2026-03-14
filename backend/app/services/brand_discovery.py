@@ -49,11 +49,15 @@ async def discover_brand_from_url(website_url: str) -> dict:
     Fetch a website and use AI to extract brand guidelines.
     Returns a dict with brand data that can be used to create/update a Brand.
     """
+    # Auto-add https:// if no scheme provided
+    if not website_url.startswith(("http://", "https://")):
+        website_url = f"https://{website_url}"
+
     # Validate URL to prevent SSRF
     _validate_url(website_url)
 
     # Step 1: Fetch the website HTML
-    async with httpx.AsyncClient(follow_redirects=True, timeout=30.0) as http:
+    async with httpx.AsyncClient(follow_redirects=True, timeout=30.0, verify=False) as http:
         response = await http.get(website_url)
         response.raise_for_status()
         html_content = response.text

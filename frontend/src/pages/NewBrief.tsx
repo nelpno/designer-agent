@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { apiClient } from '../api/client'
 import { Brand } from '../types'
@@ -83,6 +83,10 @@ export default function NewBrief() {
   const [selectedPreset, setSelectedPreset] = useState(0)
   const [isCustomFormat, setIsCustomFormat] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [suggesting, setSuggesting] = useState(false)
+  const [uploadedRefs, setUploadedRefs] = useState<Array<{ url: string; filename: string }>>([])
+  const [isDragOver, setIsDragOver] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -127,6 +131,48 @@ export default function NewBrief() {
 
   const selectedBrand = brands.find((b) => b.id === form.brand_id)
 
+  async function handleSuggestTexts() {
+    setSuggesting(true)
+    try {
+      const params = new URLSearchParams({
+        art_type: form.art_type,
+        platform: form.platform || 'geral',
+        description: form.description,
+      })
+      const response = await apiClient.post(`/api/briefs/suggest-texts?${params}`)
+      const suggestions = response.data
+      setForm((prev) => ({
+        ...prev,
+        headline: suggestions.headline || prev.headline,
+        body_text: suggestions.body_text || prev.body_text,
+        cta_text: suggestions.cta_text || prev.cta_text,
+      }))
+    } catch (e) {
+      console.error('Suggestion failed:', e)
+    } finally {
+      setSuggesting(false)
+    }
+  }
+
+  async function handleUpload(files: FileList) {
+    for (const file of Array.from(files)) {
+      const formData = new FormData()
+      formData.append('file', file)
+      try {
+        const response = await apiClient.post('/api/briefs/upload-reference', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        })
+        setUploadedRefs((prev) => [...prev, response.data])
+      } catch (e) {
+        console.error('Upload failed:', e)
+      }
+    }
+  }
+
+  function removeUploadedRef(idx: number) {
+    setUploadedRefs((prev) => prev.filter((_, i) => i !== idx))
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
@@ -149,7 +195,10 @@ export default function NewBrief() {
         headline: form.headline || undefined,
         body_text: form.body_text || undefined,
         cta_text: form.cta_text || undefined,
-        reference_urls: form.reference_urls.filter((u) => u.trim()),
+        reference_urls: [
+          ...form.reference_urls.filter((u) => u.trim()),
+          ...uploadedRefs.map((r) => r.url),
+        ],
         description: form.description || undefined,
       }
 
@@ -472,18 +521,101 @@ export default function NewBrief() {
                 className="flex-1 px-4 py-3 bg-white/[0.02] border border-white/[0.06] rounded-xl text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500/30 text-sm resize-none min-h-[220px] leading-relaxed"
               />
 
+              {/* Suggest Texts Button */}
+              {form.art_type && form.description && (
+                <div className="mt-3">
+                  <button
+                    type="button"
+                    onClick={handleSuggestTexts}
+                    disabled={suggesting}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-violet-400 border border-violet-500/40 bg-violet-500/[0.05] hover:bg-violet-500/[0.10] hover:border-violet-500/60 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                    style={{ fontFamily: 'var(--font-heading)' }}
+                  >
+                    {suggesting ? (
+                      <>
+                        <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                        </svg>
+                        <span>Gerando sugestões...</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                        </svg>
+                        <span>Sugerir Textos com IA</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+
               {/* Upload area */}
               <div className="mt-4">
-                <button
-                  type="button"
-                  className="w-full flex flex-col items-center justify-center gap-2 px-4 py-5 border-2 border-dashed border-white/[0.08] hover:border-violet-500/30 bg-white/[0.01] hover:bg-violet-500/[0.03] rounded-xl text-slate-500 hover:text-slate-300 transition-all"
+                {/* Hidden file input */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => e.target.files && handleUpload(e.target.files)}
+                />
+
+                {/* Drop zone */}
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => fileInputRef.current?.click()}
+                  onKeyDown={(e) => e.key === 'Enter' && fileInputRef.current?.click()}
+                  onDragOver={(e) => { e.preventDefault(); setIsDragOver(true) }}
+                  onDragLeave={() => setIsDragOver(false)}
+                  onDrop={(e) => {
+                    e.preventDefault()
+                    setIsDragOver(false)
+                    if (e.dataTransfer.files.length) handleUpload(e.dataTransfer.files)
+                  }}
+                  className={`w-full flex flex-col items-center justify-center gap-2 px-4 py-5 border-2 border-dashed rounded-xl cursor-pointer transition-all duration-200 ${
+                    isDragOver
+                      ? 'border-violet-500/60 bg-violet-500/[0.07] text-violet-300'
+                      : 'border-white/[0.08] hover:border-violet-500/30 bg-white/[0.01] hover:bg-violet-500/[0.03] text-slate-500 hover:text-slate-300'
+                  }`}
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                   </svg>
                   <span className="text-sm font-medium">Enviar Imagens de Referência</span>
-                  <span className="text-xs text-slate-600">(em breve)</span>
-                </button>
+                  <span className="text-xs text-slate-600">Arraste imagens aqui ou clique para enviar</span>
+                </div>
+
+                {/* Thumbnails grid */}
+                {uploadedRefs.length > 0 && (
+                  <div className="mt-3 grid grid-cols-3 gap-2">
+                    {uploadedRefs.map((ref, idx) => (
+                      <div key={idx} className="relative group rounded-lg overflow-hidden border border-white/[0.08] bg-white/[0.02]">
+                        <img
+                          src={ref.url}
+                          alt={ref.filename}
+                          className="w-full h-20 object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeUploadedRef(idx)}
+                          className="absolute top-1 right-1 p-0.5 rounded-full bg-black/60 text-white/70 hover:text-white hover:bg-rose-500/80 opacity-0 group-hover:opacity-100 transition-all duration-150"
+                          title="Remover"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                        <div className="absolute bottom-0 left-0 right-0 px-1.5 py-1 bg-black/50 text-[10px] text-slate-300 truncate opacity-0 group-hover:opacity-100 transition-opacity">
+                          {ref.filename}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 

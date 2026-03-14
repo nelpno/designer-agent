@@ -323,3 +323,35 @@
 a, button, input, select, textarea {
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
+/* Fix native select/option dropdown contrast */
+select {
+  background-color: #1a1b2e !important;
+  color: #f8fafc !important;
+}
+
+select option {
+  background-color: #1a1b2e;
+  color: #f8fafc;
+  padding: 8px 12px;
+}
+
+select option:checked,
+select option:hover {
+  background-color: #7c3aed;
+  color: #ffffff;
+}
+
+/* Dark scrollbar for select dropdowns */
+select::-webkit-scrollbar {
+  width: 6px;
+}
+
+select::-webkit-scrollbar-track {
+  background: #1a1b2e;
+}
+
+select::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 3px;
+}
