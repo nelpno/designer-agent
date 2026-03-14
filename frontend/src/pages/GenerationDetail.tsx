@@ -313,6 +313,25 @@ export default function GenerationDetail() {
                 Re-gerar
               </button>
             )}
+            {generation.status === GenerationStatus.COMPLETED && (
+              <button
+                onClick={() => {
+                  const imageUrl = currentImage?.image_url || generation.final_image_url
+                  if (!imageUrl) return
+                  const url = storageUrl(imageUrl)
+                  const link = document.createElement('a')
+                  link.href = url
+                  link.download = `design-${id?.slice(0, 8)}.png`
+                  link.click()
+                }}
+                className="flex items-center gap-2 px-4 py-2 bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.06] text-white rounded-xl text-sm font-medium transition-all"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Download
+              </button>
+            )}
             {generation.status === GenerationStatus.COMPLETED && generation.brief_id && (
               <button
                 onClick={handleVariation}
