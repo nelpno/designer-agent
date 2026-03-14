@@ -6,28 +6,22 @@ interface ScoreBadgeProps {
 function getScoreStyle(score: number) {
   if (score < 50) {
     return {
-      gradient: 'linear-gradient(135deg, #f43f5e, #fb7185)',
-      bgColor: 'rgba(244, 63, 94, 0.12)',
-      textColor: '#fb7185',
-      borderColor: 'rgba(244, 63, 94, 0.25)',
-      glowColor: 'rgba(244, 63, 94, 0.3)',
+      bgColor: 'rgba(255, 69, 58, 0.12)',
+      textColor: '#FF453A',
+      borderColor: 'rgba(255, 69, 58, 0.25)',
     }
   }
   if (score < 75) {
     return {
-      gradient: 'linear-gradient(135deg, #f59e0b, #fbbf24)',
-      bgColor: 'rgba(245, 158, 11, 0.12)',
-      textColor: '#fbbf24',
-      borderColor: 'rgba(245, 158, 11, 0.25)',
-      glowColor: 'rgba(245, 158, 11, 0.3)',
+      bgColor: 'rgba(255, 214, 10, 0.12)',
+      textColor: '#FFD60A',
+      borderColor: 'rgba(255, 214, 10, 0.25)',
     }
   }
   return {
-    gradient: 'linear-gradient(135deg, #10b981, #34d399)',
-    bgColor: 'rgba(16, 185, 129, 0.12)',
-    textColor: '#34d399',
-    borderColor: 'rgba(16, 185, 129, 0.25)',
-    glowColor: 'rgba(16, 185, 129, 0.3)',
+    bgColor: 'rgba(48, 209, 88, 0.12)',
+    textColor: '#30D158',
+    borderColor: 'rgba(48, 209, 88, 0.25)',
   }
 }
 
@@ -37,9 +31,9 @@ export default function ScoreBadge({ score, className = '' }: ScoreBadgeProps) {
       <span
         className={`inline-flex items-center justify-center px-2.5 py-1 rounded-full text-xs font-semibold ${className}`}
         style={{
-          background: 'rgba(71, 85, 105, 0.15)',
-          color: '#64748b',
-          border: '1px solid rgba(71, 85, 105, 0.2)',
+          background: 'var(--bg-tertiary)',
+          color: 'var(--text-tertiary)',
+          border: '1px solid var(--border)',
           fontFamily: 'var(--font-heading)',
         }}
       >

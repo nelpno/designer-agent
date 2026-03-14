@@ -6,64 +6,63 @@ interface ModelBadgeProps {
 function getModelStyle(model: string) {
   const lower = model.toLowerCase()
 
-  // Nano Banana family → violet
-  if (lower.includes('nano') || lower.includes('banana')) {
+  // Nano Banana / Gemini family → green
+  if (lower.includes('nano') || lower.includes('banana') || lower.includes('gemini')) {
     return {
-      bgColor: 'rgba(124, 58, 237, 0.12)',
-      textColor: '#a78bfa',
-      borderColor: 'rgba(124, 58, 237, 0.25)',
+      bgColor: 'rgba(48, 209, 88, 0.12)',
+      textColor: '#30D158',
+      borderColor: 'rgba(48, 209, 88, 0.25)',
     }
   }
   // FLUX family → cyan
   if (lower.includes('flux')) {
     return {
-      bgColor: 'rgba(6, 182, 212, 0.12)',
-      textColor: '#22d3ee',
-      borderColor: 'rgba(6, 182, 212, 0.25)',
+      bgColor: 'rgba(90, 200, 250, 0.12)',
+      textColor: '#5AC8FA',
+      borderColor: 'rgba(90, 200, 250, 0.25)',
     }
   }
   // Riverflow family → amber
   if (lower.includes('river')) {
     return {
-      bgColor: 'rgba(245, 158, 11, 0.12)',
-      textColor: '#fbbf24',
-      borderColor: 'rgba(245, 158, 11, 0.25)',
+      bgColor: 'rgba(255, 214, 10, 0.12)',
+      textColor: '#FFD60A',
+      borderColor: 'rgba(255, 214, 10, 0.25)',
     }
   }
-  // DALL-E family → fuchsia
+  // DALL-E family → violet
   if (lower.includes('dall')) {
     return {
-      bgColor: 'rgba(192, 38, 211, 0.12)',
-      textColor: '#e879f9',
-      borderColor: 'rgba(192, 38, 211, 0.25)',
+      bgColor: 'rgba(94, 92, 230, 0.12)',
+      textColor: '#5E5CE6',
+      borderColor: 'rgba(94, 92, 230, 0.25)',
     }
   }
-  // Stable Diffusion → rose
+  // Stable Diffusion → red
   if (lower.includes('stable') || lower.includes('sd')) {
     return {
-      bgColor: 'rgba(244, 63, 94, 0.12)',
-      textColor: '#fb7185',
-      borderColor: 'rgba(244, 63, 94, 0.25)',
+      bgColor: 'rgba(255, 69, 58, 0.12)',
+      textColor: '#FF453A',
+      borderColor: 'rgba(255, 69, 58, 0.25)',
     }
   }
-  // Midjourney → emerald
+  // Midjourney → green
   if (lower.includes('midjourney')) {
     return {
-      bgColor: 'rgba(16, 185, 129, 0.12)',
-      textColor: '#34d399',
-      borderColor: 'rgba(16, 185, 129, 0.25)',
+      bgColor: 'rgba(48, 209, 88, 0.12)',
+      textColor: '#30D158',
+      borderColor: 'rgba(48, 209, 88, 0.25)',
     }
   }
-  // Default → subtle indigo
+  // Default → cyan
   return {
-    bgColor: 'rgba(99, 102, 241, 0.12)',
-    textColor: '#818cf8',
-    borderColor: 'rgba(99, 102, 241, 0.25)',
+    bgColor: 'rgba(90, 200, 250, 0.12)',
+    textColor: '#5AC8FA',
+    borderColor: 'rgba(90, 200, 250, 0.25)',
   }
 }
 
 function formatModelName(model: string): string {
-  // Truncate long names
   if (model.length > 20) {
     return model.slice(0, 18) + '\u2026'
   }
@@ -76,9 +75,9 @@ export default function ModelBadge({ model, className = '' }: ModelBadgeProps) {
       <span
         className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${className}`}
         style={{
-          background: 'rgba(71, 85, 105, 0.12)',
-          color: '#64748b',
-          border: '1px solid rgba(71, 85, 105, 0.2)',
+          background: 'var(--bg-tertiary)',
+          color: 'var(--text-tertiary)',
+          border: '1px solid var(--border)',
           fontFamily: 'var(--font-body)',
         }}
       >
@@ -102,7 +101,6 @@ export default function ModelBadge({ model, className = '' }: ModelBadgeProps) {
         fontFamily: 'var(--font-body)',
       }}
     >
-      {/* Small sparkle icon */}
       <svg className="w-3 h-3 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
         <path d="M12 1l3 8h8l-6.5 5 2.5 8L12 16.5 5 22l2.5-8L1 9h8l3-8z" />
       </svg>

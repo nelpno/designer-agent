@@ -17,19 +17,19 @@ interface DecisionLogEntry {
 
 function stepDotColor(status?: string) {
   switch (status) {
-    case 'success': return 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]'
-    case 'warning': return 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]'
-    case 'error': return 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]'
-    default: return 'bg-slate-500'
+    case 'success': return 'bg-artisan-success shadow-[0_0_8px_rgba(48,209,88,0.5)]'
+    case 'warning': return 'bg-artisan-warning shadow-[0_0_8px_rgba(255,214,10,0.5)]'
+    case 'error': return 'bg-artisan-error shadow-[0_0_8px_rgba(255,69,58,0.5)]'
+    default: return 'bg-gray-500'
   }
 }
 
 function stepCardStyle(status?: string) {
   switch (status) {
-    case 'success': return 'border-emerald-500/20 bg-emerald-500/[0.03]'
-    case 'warning': return 'border-amber-500/20 bg-amber-500/[0.03]'
-    case 'error': return 'border-rose-500/20 bg-rose-500/[0.03]'
-    default: return 'border-white/[0.06] bg-white/[0.02]'
+    case 'success': return { borderColor: 'rgba(48, 209, 88, 0.2)', background: 'rgba(48, 209, 88, 0.03)' }
+    case 'warning': return { borderColor: 'rgba(255, 214, 10, 0.2)', background: 'rgba(255, 214, 10, 0.03)' }
+    case 'error': return { borderColor: 'rgba(255, 69, 58, 0.2)', background: 'rgba(255, 69, 58, 0.03)' }
+    default: return { borderColor: 'var(--border)', background: 'var(--bg-tertiary)' }
   }
 }
 
@@ -81,7 +81,7 @@ function PipelineTrace({ logs, pipelineContext }: { logs: PipelineLog[]; pipelin
 
   if (steps.length === 0) {
     return (
-      <div className="text-center py-8 text-slate-600 text-sm">
+      <div className="text-center py-8 text-sm" style={{ color: 'var(--text-tertiary)' }}>
         Nenhum pipeline disponível ainda
       </div>
     )
@@ -90,61 +90,90 @@ function PipelineTrace({ logs, pipelineContext }: { logs: PipelineLog[]; pipelin
   return (
     <div className="relative">
       {/* Vertical line */}
-      <div className="absolute left-[15px] top-3 bottom-3 w-px bg-gradient-to-b from-violet-500/30 via-white/[0.06] to-transparent" />
+      <div
+        className="absolute left-[15px] top-3 bottom-3 w-px"
+        style={{ background: 'linear-gradient(to bottom, var(--accent-primary), var(--border), transparent)' }}
+      />
 
       <div className="space-y-3">
-        {steps.map((step, idx) => (
-          <div key={idx} className="relative pl-10">
-            {/* Dot */}
-            <div className={`absolute left-2 top-3.5 w-2.5 h-2.5 rounded-full ${stepDotColor(step.status)}`} />
+        {steps.map((step, idx) => {
+          const cardStyle = stepCardStyle(step.status)
+          return (
+            <div key={idx} className="relative pl-10">
+              {/* Dot */}
+              <div className={`absolute left-2 top-3.5 w-2.5 h-2.5 rounded-full ${stepDotColor(step.status)}`} />
 
-            <div className={`rounded-xl border p-4 transition-all hover:bg-white/[0.02] ${stepCardStyle(step.status)}`}>
-              <div className="flex items-start justify-between gap-3 mb-1">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="text-violet-400 flex-shrink-0">
-                    {stepAgentIcon(step.agent ?? step.step)}
-                  </span>
-                  <span className="text-white text-sm font-semibold truncate" style={{ fontFamily: 'var(--font-heading)' }}>
-                    {step.agent ?? step.step ?? `Etapa ${idx + 1}`}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  {step.status && (
-                    <span className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full ${
-                      step.status === 'success'
-                        ? 'bg-emerald-500/15 text-emerald-400'
-                        : step.status === 'warning'
-                        ? 'bg-amber-500/15 text-amber-400'
-                        : step.status === 'error'
-                        ? 'bg-rose-500/15 text-rose-400'
-                        : 'bg-white/[0.06] text-slate-400'
-                    }`}>
-                      {step.status === 'success' ? 'Sucesso' : step.status === 'warning' ? 'Aviso' : step.status === 'error' ? 'Erro' : step.status}
+              <div
+                className="rounded-xl border p-4 transition-all"
+                style={cardStyle}
+              >
+                <div className="flex items-start justify-between gap-3 mb-1">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span style={{ color: 'var(--accent-primary)' }} className="flex-shrink-0">
+                      {stepAgentIcon(step.agent ?? step.step)}
                     </span>
-                  )}
-                  {step.timestamp && (
-                    <span className="text-slate-600 text-[10px] font-mono">
-                      {new Date(step.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                    <span className="text-sm font-semibold truncate" style={{ fontFamily: 'var(--font-heading)', color: 'var(--text-primary)' }}>
+                      {step.agent ?? step.step ?? `Etapa ${idx + 1}`}
                     </span>
-                  )}
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {step.status && (
+                      <span
+                        className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full"
+                        style={{
+                          background: step.status === 'success'
+                            ? 'rgba(48, 209, 88, 0.15)'
+                            : step.status === 'warning'
+                            ? 'rgba(255, 214, 10, 0.15)'
+                            : step.status === 'error'
+                            ? 'rgba(255, 69, 58, 0.15)'
+                            : 'var(--bg-tertiary)',
+                          color: step.status === 'success'
+                            ? '#30D158'
+                            : step.status === 'warning'
+                            ? '#FFD60A'
+                            : step.status === 'error'
+                            ? '#FF453A'
+                            : 'var(--text-secondary)',
+                        }}
+                      >
+                        {step.status === 'success' ? 'Sucesso' : step.status === 'warning' ? 'Aviso' : step.status === 'error' ? 'Erro' : step.status}
+                      </span>
+                    )}
+                    {step.timestamp && (
+                      <span className="text-[10px] font-mono" style={{ color: 'var(--text-tertiary)' }}>
+                        {new Date(step.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                      </span>
+                    )}
+                  </div>
                 </div>
+                {step.decision && (
+                  <p className="text-sm mt-1.5 leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{step.decision}</p>
+                )}
+                {step.reasoning && (
+                  <details className="mt-2.5">
+                    <summary
+                      className="text-xs cursor-pointer select-none transition-colors"
+                      style={{ color: 'var(--accent-secondary)' }}
+                    >
+                      Raciocínio
+                    </summary>
+                    <pre
+                      className="mt-2 text-xs rounded-lg p-3 overflow-auto max-h-40 whitespace-pre-wrap"
+                      style={{
+                        color: 'var(--text-secondary)',
+                        background: 'var(--bg-primary)',
+                        border: '1px solid var(--border)',
+                      }}
+                    >
+                      {step.reasoning}
+                    </pre>
+                  </details>
+                )}
               </div>
-              {step.decision && (
-                <p className="text-slate-300 text-sm mt-1.5 leading-relaxed">{step.decision}</p>
-              )}
-              {step.reasoning && (
-                <details className="mt-2.5">
-                  <summary className="text-xs text-violet-400/60 cursor-pointer hover:text-violet-400 select-none transition-colors">
-                    Raciocínio
-                  </summary>
-                  <pre className="mt-2 text-xs text-slate-400 bg-black/20 rounded-lg p-3 overflow-auto max-h-40 whitespace-pre-wrap border border-white/[0.04]">
-                    {step.reasoning}
-                  </pre>
-                </details>
-              )}
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )
@@ -161,8 +190,8 @@ export default function GenerationDetail() {
   const [retrying, setRetrying] = useState(false)
   const [selectedImage, setSelectedImage] = useState(0)
   const wsRef = useRef<WebSocket | null>(null)
+  const wsConnectedRef = useRef(false)
 
-  // BUG 4 fix: wrap in useCallback to avoid stale closure
   const fetchGeneration = useCallback(async () => {
     if (!id) return
     try {
@@ -190,8 +219,9 @@ export default function GenerationDetail() {
     const ws = createWebSocket(`/ws/generation/${id}`)
     wsRef.current = ws
 
-    // BUG 2 fix: mounted flag to prevent setState after unmount
     let mounted = true
+
+    ws.onopen = () => { wsConnectedRef.current = true }
 
     ws.onmessage = (event) => {
       if (!mounted) return
@@ -207,16 +237,15 @@ export default function GenerationDetail() {
       }
     }
 
-    // BUG 1 fix: handle WebSocket errors
     ws.onerror = () => {
       console.error('WebSocket error')
     }
 
-    // BUG 2 fix: clear wsRef on close
-    ws.onclose = () => { wsRef.current = null }
+    ws.onclose = () => { wsRef.current = null; wsConnectedRef.current = false }
 
     return () => {
       mounted = false
+      wsConnectedRef.current = false
       ws.close()
     }
   }, [id, fetchGeneration])
@@ -230,12 +259,13 @@ export default function GenerationDetail() {
 
     if (!isActive) return
 
-    // Poll logs and status while pipeline is active (even if WebSocket is connected)
+    // Skip polling if WebSocket is connected (avoid duplicate requests)
+    if (wsConnectedRef.current) return
+
     const interval = setInterval(fetchGeneration, 3000)
     return () => clearInterval(interval)
   }, [generation?.status, fetchGeneration])
 
-  // BUG 8 fix: reset selectedImage to 0 when images list changes
   useEffect(() => {
     if (selectedImage >= images.length && images.length > 0) {
       setSelectedImage(0)
@@ -277,7 +307,10 @@ export default function GenerationDetail() {
       <div className="flex items-center gap-4 mb-6 animate-fade-in">
         <button
           onClick={() => navigate(-1)}
-          className="p-2 text-slate-500 hover:text-white hover:bg-white/[0.06] rounded-xl transition-all"
+          className="p-2 rounded-xl transition-all"
+          style={{ color: 'var(--text-secondary)' }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-tertiary)'; e.currentTarget.style.color = 'var(--text-primary)' }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)' }}
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -285,10 +318,15 @@ export default function GenerationDetail() {
         </button>
         <div className="flex-1">
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold gradient-text tracking-tight">Detalhe da Geração</h1>
+            <h1
+              className="text-2xl font-bold tracking-tight"
+              style={{ fontFamily: 'var(--font-heading)', color: 'var(--text-primary)', letterSpacing: '-0.5px' }}
+            >
+              Detalhe da Geração
+            </h1>
             {generation && <StatusBadge status={generation.status} />}
           </div>
-          {id && <p className="text-slate-600 text-xs mt-0.5 font-mono">{id}</p>}
+          {id && <p className="text-xs mt-0.5 font-mono" style={{ color: 'var(--text-tertiary)' }}>{id}</p>}
         </div>
         {generation && (
           <div className="flex items-center gap-2">
@@ -296,7 +334,12 @@ export default function GenerationDetail() {
               <button
                 onClick={handleRetry}
                 disabled={retrying}
-                className="flex items-center gap-2 px-4 py-2 bg-amber-600/90 hover:bg-amber-600 disabled:opacity-50 text-white rounded-xl text-sm font-medium transition-all"
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all disabled:opacity-50"
+                style={{
+                  background: 'rgba(255, 214, 10, 0.1)',
+                  color: 'var(--color-warning)',
+                  border: '1px solid rgba(255, 214, 10, 0.2)',
+                }}
               >
                 {retrying ? (
                   <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -316,7 +359,7 @@ export default function GenerationDetail() {
                 onClick={() => {
                   window.location.href = `${import.meta.env.VITE_API_URL ?? 'http://localhost:8000'}/api/generations/${id}/download`
                 }}
-                className="flex items-center gap-2 px-4 py-2 bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.06] text-white rounded-xl text-sm font-medium transition-all"
+                className="btn-secondary flex items-center gap-2 text-sm"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -327,7 +370,7 @@ export default function GenerationDetail() {
             {generation.status === GenerationStatus.COMPLETED && generation.brief_id && (
               <button
                 onClick={handleVariation}
-                className="btn-gradient flex items-center gap-2 text-sm"
+                className="btn-primary flex items-center gap-2 text-sm"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
@@ -340,30 +383,37 @@ export default function GenerationDetail() {
       </div>
 
       {error && (
-        <div className="mb-6 p-4 glass-card-static border-rose-500/30 bg-rose-500/[0.06] rounded-xl text-rose-400 text-sm">
+        <div
+          className="mb-6 p-4 rounded-xl text-sm"
+          style={{
+            background: 'rgba(255, 69, 58, 0.08)',
+            border: '1px solid rgba(255, 69, 58, 0.2)',
+            color: 'var(--color-error)',
+          }}
+        >
           {error}
         </div>
       )}
 
       {loading ? (
         <div className="flex gap-6">
-          <div className="flex-[3] glass-card-static rounded-xl aspect-square animate-pulse" />
+          <div className="flex-[3] artisan-card-static rounded-xl aspect-square animate-pulse" />
           <div className="flex-[2] space-y-4">
-            <div className="h-8 glass-card-static rounded-xl animate-pulse" />
-            <div className="h-40 glass-card-static rounded-xl animate-pulse" />
-            <div className="h-60 glass-card-static rounded-xl animate-pulse" />
+            <div className="h-8 artisan-card-static rounded-xl animate-pulse" />
+            <div className="h-40 artisan-card-static rounded-xl animate-pulse" />
+            <div className="h-60 artisan-card-static rounded-xl animate-pulse" />
           </div>
         </div>
       ) : !generation ? (
-        <div className="glass-card-static p-16 text-center">
-          <p className="text-slate-400">Geração não encontrada</p>
+        <div className="artisan-card-static p-16 text-center">
+          <p style={{ color: 'var(--text-secondary)' }}>Geração não encontrada</p>
         </div>
       ) : (
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Left: Image preview */}
           <div className="flex-[3] space-y-4 animate-slide-up">
-            {/* Main image — Glass frame */}
-            <div className="glass-card-static overflow-hidden rounded-2xl">
+            {/* Main image */}
+            <div className="artisan-card-static overflow-hidden rounded-2xl">
               <div className="relative">
                 {currentImage ? (
                   <img
@@ -381,24 +431,30 @@ export default function GenerationDetail() {
                   generation.status === GenerationStatus.PROCESSING ? (
                   <div className="aspect-square flex flex-col items-center justify-center gap-4">
                     <div className="relative">
-                      <div className="w-16 h-16 rounded-full border-2 border-violet-500/30 border-t-violet-500 animate-spin" />
+                      <div
+                        className="w-16 h-16 rounded-full border-2 animate-spin"
+                        style={{ borderColor: 'var(--border)', borderTopColor: 'var(--accent-primary)' }}
+                      />
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <svg className="w-6 h-6 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-6 h-6" style={{ color: 'var(--accent-primary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                         </svg>
                       </div>
                     </div>
-                    <p className="text-slate-400 text-sm" style={{ fontFamily: 'var(--font-heading)' }}>Gerando imagem...</p>
+                    <p className="text-sm" style={{ fontFamily: 'var(--font-heading)', color: 'var(--text-secondary)' }}>Gerando imagem...</p>
                   </div>
                 ) : (
                   <div className="aspect-square flex items-center justify-center">
                     <div className="text-center">
-                      <div className="w-16 h-16 rounded-2xl bg-white/[0.03] flex items-center justify-center mx-auto mb-3">
-                        <svg className="w-8 h-8 text-white/[0.1]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div
+                        className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-3"
+                        style={{ background: 'var(--bg-tertiary)' }}
+                      >
+                        <svg className="w-8 h-8" style={{ color: 'var(--text-tertiary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
                       </div>
-                      <p className="text-slate-600 text-sm">Nenhuma imagem gerada</p>
+                      <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>Nenhuma imagem gerada</p>
                     </div>
                   </div>
                 )}
@@ -419,11 +475,12 @@ export default function GenerationDetail() {
                   <button
                     key={img.id}
                     onClick={() => setSelectedImage(idx)}
-                    className={`flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border-2 transition-all ${
-                      selectedImage === idx
-                        ? 'border-violet-500 shadow-[0_0_12px_rgba(124,58,237,0.3)]'
-                        : 'border-white/[0.06] hover:border-white/[0.15] opacity-70 hover:opacity-100'
-                    }`}
+                    className="flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border-2 transition-all"
+                    style={{
+                      borderColor: selectedImage === idx ? 'var(--accent-primary)' : 'var(--border)',
+                      boxShadow: selectedImage === idx ? 'var(--shadow-glow-green)' : 'none',
+                      opacity: selectedImage === idx ? 1 : 0.7,
+                    }}
                   >
                     <img
                       src={img.thumbnail_url ?? img.image_url}
@@ -436,10 +493,13 @@ export default function GenerationDetail() {
             )}
 
             {/* Pipeline Trace */}
-            <div className="glass-card-static p-6 rounded-2xl">
+            <div className="artisan-card-static p-6 rounded-2xl">
               <div className="flex items-center gap-2 mb-5">
-                <div className="w-1.5 h-5 rounded-full bg-gradient-to-b from-violet-500 to-fuchsia-500" />
-                <h2 className="text-white font-semibold" style={{ fontFamily: 'var(--font-heading)' }}>Pipeline</h2>
+                <div
+                  className="w-1.5 h-5 rounded-full"
+                  style={{ background: 'var(--accent-gradient)' }}
+                />
+                <h2 className="font-semibold" style={{ fontFamily: 'var(--font-heading)', color: 'var(--text-primary)' }}>Pipeline</h2>
               </div>
               <PipelineTrace logs={logs} pipelineContext={pipelineContext} />
             </div>
@@ -448,52 +508,55 @@ export default function GenerationDetail() {
           {/* Right: Details sidebar */}
           <div className="flex-[2] space-y-4 animate-slide-up" style={{ animationDelay: '60ms' }}>
             {/* Details card */}
-            <div className="glass-card-static p-5 rounded-2xl">
+            <div className="artisan-card-static p-5 rounded-2xl">
               <div className="flex items-center gap-2 mb-4">
-                <div className="w-1.5 h-5 rounded-full bg-gradient-to-b from-cyan-500 to-blue-500" />
-                <h2 className="text-white font-semibold" style={{ fontFamily: 'var(--font-heading)' }}>Detalhes</h2>
+                <div
+                  className="w-1.5 h-5 rounded-full"
+                  style={{ background: 'var(--accent-secondary)' }}
+                />
+                <h2 className="font-semibold" style={{ fontFamily: 'var(--font-heading)', color: 'var(--text-primary)' }}>Detalhes</h2>
               </div>
               <dl className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <dt className="text-slate-500 text-sm">Status</dt>
+                  <dt className="text-sm" style={{ color: 'var(--text-secondary)' }}>Status</dt>
                   <dd><StatusBadge status={generation.status} /></dd>
                 </div>
                 {generation.model_used && (
                   <div className="flex items-center justify-between">
-                    <dt className="text-slate-500 text-sm">Modelo</dt>
+                    <dt className="text-sm" style={{ color: 'var(--text-secondary)' }}>Modelo</dt>
                     <dd><ModelBadge model={generation.model_used} /></dd>
                   </div>
                 )}
                 {generation.final_score != null && (
                   <div className="flex items-center justify-between">
-                    <dt className="text-slate-500 text-sm">Score</dt>
+                    <dt className="text-sm" style={{ color: 'var(--text-secondary)' }}>Score</dt>
                     <dd><ScoreBadge score={generation.final_score} /></dd>
                   </div>
                 )}
                 {generation.iterations_used > 0 && (
                   <div className="flex items-center justify-between">
-                    <dt className="text-slate-500 text-sm">Iterações</dt>
-                    <dd className="text-slate-300 text-sm font-medium">{generation.iterations_used}</dd>
+                    <dt className="text-sm" style={{ color: 'var(--text-secondary)' }}>Iterações</dt>
+                    <dd className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{generation.iterations_used}</dd>
                   </div>
                 )}
                 {generation.total_duration_ms != null && (
                   <div className="flex items-center justify-between">
-                    <dt className="text-slate-500 text-sm">Duração</dt>
-                    <dd className="text-slate-300 text-sm font-medium">
+                    <dt className="text-sm" style={{ color: 'var(--text-secondary)' }}>Duração</dt>
+                    <dd className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
                       {(generation.total_duration_ms / 1000).toFixed(1)}s
                     </dd>
                   </div>
                 )}
                 <div className="flex items-center justify-between">
-                  <dt className="text-slate-500 text-sm">Criado em</dt>
-                  <dd className="text-slate-300 text-sm">
+                  <dt className="text-sm" style={{ color: 'var(--text-secondary)' }}>Criado em</dt>
+                  <dd className="text-sm" style={{ color: 'var(--text-primary)' }}>
                     {new Date(generation.created_at).toLocaleString('pt-BR')}
                   </dd>
                 </div>
                 {generation.brief_id && (
                   <div className="flex items-center justify-between">
-                    <dt className="text-slate-500 text-sm">Brief</dt>
-                    <dd className="text-slate-500 text-xs font-mono truncate max-w-[140px]">
+                    <dt className="text-sm" style={{ color: 'var(--text-secondary)' }}>Brief</dt>
+                    <dd className="text-xs font-mono truncate max-w-[140px]" style={{ color: 'var(--text-tertiary)' }}>
                       {generation.brief_id}
                     </dd>
                   </div>
@@ -503,56 +566,62 @@ export default function GenerationDetail() {
 
             {/* Error message */}
             {generation.error_message && (
-              <div className="rounded-2xl border border-rose-500/20 bg-rose-500/[0.04] p-5">
-                <h3 className="text-rose-400 font-medium text-sm mb-2" style={{ fontFamily: 'var(--font-heading)' }}>Erro</h3>
-                <p className="text-rose-300/80 text-sm leading-relaxed">{generation.error_message}</p>
+              <div
+                className="rounded-2xl p-5"
+                style={{
+                  border: '1px solid rgba(255, 69, 58, 0.2)',
+                  background: 'rgba(255, 69, 58, 0.04)',
+                }}
+              >
+                <h3 className="font-medium text-sm mb-2" style={{ fontFamily: 'var(--font-heading)', color: 'var(--color-error)' }}>Erro</h3>
+                <p className="text-sm leading-relaxed" style={{ color: 'var(--color-error)', opacity: 0.8 }}>{generation.error_message}</p>
               </div>
             )}
 
-            {/* Prompt — Code-style box */}
+            {/* Prompt */}
             {promptUsed && (
-              <div className="glass-card-static p-5 rounded-2xl">
+              <div className="artisan-card-static p-5 rounded-2xl">
                 <div className="flex items-center gap-2 mb-3">
-                  <svg className="w-4 h-4 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4" style={{ color: 'var(--accent-primary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
                   </svg>
-                  <h3 className="text-white font-semibold text-sm" style={{ fontFamily: 'var(--font-heading)' }}>
+                  <h3 className="font-semibold text-sm" style={{ fontFamily: 'var(--font-heading)', color: 'var(--text-primary)' }}>
                     Prompt Utilizado
                   </h3>
                 </div>
-                <div className="bg-black/30 rounded-xl p-4 border border-white/[0.04]">
-                  <p className="text-slate-300 text-sm leading-relaxed font-mono">{promptUsed}</p>
+                <div className="rounded-xl p-4" style={{ background: 'var(--bg-primary)', border: '1px solid var(--border)' }}>
+                  <p className="text-sm leading-relaxed font-mono" style={{ color: 'var(--text-secondary)' }}>{promptUsed}</p>
                 </div>
               </div>
             )}
 
             {/* Negative Prompt */}
             {negativePromptUsed && (
-              <div className="glass-card-static p-5 rounded-2xl">
-                <h3 className="text-white font-semibold text-sm mb-3" style={{ fontFamily: 'var(--font-heading)' }}>
+              <div className="artisan-card-static p-5 rounded-2xl">
+                <h3 className="font-semibold text-sm mb-3" style={{ fontFamily: 'var(--font-heading)', color: 'var(--text-primary)' }}>
                   Prompt Negativo
                 </h3>
-                <div className="bg-black/30 rounded-xl p-4 border border-white/[0.04]">
-                  <p className="text-slate-400 text-sm leading-relaxed font-mono">{negativePromptUsed}</p>
+                <div className="rounded-xl p-4" style={{ background: 'var(--bg-primary)', border: '1px solid var(--border)' }}>
+                  <p className="text-sm leading-relaxed font-mono" style={{ color: 'var(--text-tertiary)' }}>{negativePromptUsed}</p>
                 </div>
               </div>
             )}
 
             {/* Raw logs */}
             {logs.length > 0 && (
-              <div className="glass-card-static p-5 rounded-2xl">
-                <h3 className="text-white font-semibold text-sm mb-3" style={{ fontFamily: 'var(--font-heading)' }}>
+              <div className="artisan-card-static p-5 rounded-2xl">
+                <h3 className="font-semibold text-sm mb-3" style={{ fontFamily: 'var(--font-heading)', color: 'var(--text-primary)' }}>
                   Logs
-                  <span className="ml-2 text-xs text-slate-600 font-normal">({logs.length})</span>
+                  <span className="ml-2 text-xs font-normal" style={{ color: 'var(--text-tertiary)' }}>({logs.length})</span>
                 </h3>
                 <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
                   {logs.map((log) => (
                     <div key={log.id} className="flex items-start gap-2 py-1">
-                      <span className="text-xs flex-shrink-0 font-medium text-violet-400/60">
+                      <span className="text-xs flex-shrink-0 font-medium" style={{ color: 'var(--accent-primary)', opacity: 0.6 }}>
                         {log.agent_name}
                       </span>
                       {log.decision && (
-                        <span className="text-slate-500 text-xs">{log.decision}</span>
+                        <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{log.decision}</span>
                       )}
                     </div>
                   ))}

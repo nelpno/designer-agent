@@ -20,8 +20,8 @@ interface BrandForm {
 const EMPTY_FORM: BrandForm = {
   name: '',
   logo_url: '',
-  primary_colors: ['#7c3aed'],
-  secondary_colors: ['#c026d3'],
+  primary_colors: ['#30D158'],
+  secondary_colors: ['#5AC8FA'],
   font_heading: '',
   font_body: '',
   tone_of_voice: '',
@@ -29,11 +29,6 @@ const EMPTY_FORM: BrandForm = {
   dont_rules: [''],
   website_url: '',
   description: '',
-}
-
-// Styled input class for glass theme
-function inputClass(extra = '') {
-  return `w-full px-3 py-2.5 bg-white/[0.03] border border-white/[0.08] rounded-lg text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent text-sm transition-all ${extra}`
 }
 
 // Color picker
@@ -55,7 +50,8 @@ function ColorInput({
           type="color"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="w-10 h-10 rounded-lg cursor-pointer border-2 border-white/[0.06] bg-transparent p-0.5 hover:border-white/[0.15] transition-colors"
+          className="w-10 h-10 rounded-lg cursor-pointer p-0.5 transition-colors"
+          style={{ border: '2px solid var(--border)', background: 'transparent' }}
         />
       </div>
       <input
@@ -63,13 +59,14 @@ function ColorInput({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder="#000000"
-        className={`${inputClass()} flex-1 font-mono uppercase`}
+        className="artisan-input flex-1 font-mono uppercase"
       />
       {canRemove && (
         <button
           type="button"
           onClick={onRemove}
-          className="p-1.5 text-slate-600 hover:text-rose-400 transition-colors"
+          className="p-1.5 transition-colors"
+          style={{ color: 'var(--text-tertiary)' }}
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -85,18 +82,18 @@ function RuleList({
   values,
   onChange,
   placeholder,
-  accentColor,
+  dotColor,
 }: {
   values: string[]
   onChange: (v: string[]) => void
   placeholder: string
-  accentColor: string
+  dotColor: string
 }) {
   return (
     <div className="space-y-2">
       {values.map((v, idx) => (
         <div key={idx} className="flex items-center gap-2">
-          <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${accentColor}`} />
+          <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: dotColor }} />
           <input
             type="text"
             value={v}
@@ -104,13 +101,14 @@ function RuleList({
               const next = [...values]; next[idx] = e.target.value; onChange(next)
             }}
             placeholder={placeholder}
-            className={`${inputClass()} flex-1`}
+            className="artisan-input flex-1"
           />
           {values.length > 1 && (
             <button
               type="button"
               onClick={() => onChange(values.filter((_, i) => i !== idx))}
-              className="p-1.5 text-slate-600 hover:text-rose-400 transition-colors"
+              className="p-1.5 transition-colors"
+              style={{ color: 'var(--text-tertiary)' }}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -122,7 +120,8 @@ function RuleList({
       <button
         type="button"
         onClick={() => onChange([...values, ''])}
-        className="flex items-center gap-1.5 text-xs text-violet-400 hover:text-violet-300 transition-colors"
+        className="flex items-center gap-1.5 text-xs transition-colors"
+        style={{ color: 'var(--accent-primary)' }}
       >
         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -137,8 +136,8 @@ function brandToForm(brand: Brand): BrandForm {
   return {
     name: brand.name ?? '',
     logo_url: brand.logo_url ?? '',
-    primary_colors: brand.primary_colors.length > 0 ? brand.primary_colors : ['#7c3aed'],
-    secondary_colors: brand.secondary_colors.length > 0 ? brand.secondary_colors : ['#c026d3'],
+    primary_colors: brand.primary_colors.length > 0 ? brand.primary_colors : ['#30D158'],
+    secondary_colors: brand.secondary_colors.length > 0 ? brand.secondary_colors : ['#5AC8FA'],
     font_heading: brand.fonts?.heading ?? brand.fonts?.font_heading ?? '',
     font_body: brand.fonts?.body ?? brand.fonts?.font_body ?? '',
     tone_of_voice: brand.tone_of_voice ?? '',
@@ -206,8 +205,6 @@ function BrandModal({
     setField(field, form[field].filter((_, i) => i !== idx))
   }
 
-  // Handle file upload for logo preview
-  // BUG 6 fix: also store dataUrl in form.logo_url so it is sent to the API
   function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
@@ -220,13 +217,11 @@ function BrandModal({
     reader.readAsDataURL(file)
   }
 
-  // Brand discovery
   async function handleDiscover() {
     if (!form.website_url.trim()) return
     try {
       setDiscovering(true)
       setDiscoverError(null)
-      // Extract base64 from logo data URL if available
       let logoB64: string | null = null
       if (form.logo_url && form.logo_url.startsWith('data:')) {
         const commaIdx = form.logo_url.indexOf(',')
@@ -238,7 +233,6 @@ function BrandModal({
         logoB64 ? { logo_base64: logoB64 } : undefined
       )
       const data = (res.data as Record<string, unknown>).discovered as Record<string, unknown> ?? res.data
-      // Pre-fill fields from discovery
       if (data.name) setField('name', data.name as string)
       if (Array.isArray(data.primary_colors) && data.primary_colors.length > 0)
         setField('primary_colors', data.primary_colors as string[])
@@ -259,9 +253,6 @@ function BrandModal({
     }
   }
 
-  // BUG 10 fix: extract save logic into its own function so it can be called
-  // from both the form onSubmit handler and the footer button onClick without
-  // needing to fabricate a synthetic Event.
   async function saveForm() {
     if (!form.name.trim()) {
       setError('O nome da marca é obrigatório')
@@ -297,18 +288,19 @@ function BrandModal({
       <div
         className="w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl rounded-2xl overflow-hidden animate-slide-up"
         style={{
-          background: 'linear-gradient(180deg, rgba(15,16,28,0.98), rgba(10,11,20,0.99))',
-          border: '1px solid rgba(255,255,255,0.06)',
+          background: 'var(--bg-secondary)',
+          border: '1px solid var(--border)',
         }}
       >
         {/* Modal header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.06]">
-          <h2 className="text-white font-bold text-lg" style={{ fontFamily: 'var(--font-heading)' }}>
+        <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
+          <h2 className="font-bold text-lg" style={{ fontFamily: 'var(--font-heading)', color: 'var(--text-primary)' }}>
             {isEdit ? 'Editar Marca' : 'Nova Marca'}
           </h2>
           <button
             onClick={onClose}
-            className="p-1.5 text-slate-500 hover:text-white hover:bg-white/[0.06] rounded-lg transition-all"
+            className="p-1.5 rounded-lg transition-all"
+            style={{ color: 'var(--text-secondary)' }}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -319,41 +311,51 @@ function BrandModal({
         {/* Modal body */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
           {error && (
-            <div className="p-3 border border-rose-500/30 bg-rose-500/[0.06] rounded-lg text-rose-400 text-sm">
+            <div
+              className="p-3 rounded-lg text-sm"
+              style={{
+                background: 'rgba(255, 69, 58, 0.08)',
+                border: '1px solid rgba(255, 69, 58, 0.2)',
+                color: 'var(--color-error)',
+              }}
+            >
               {error}
             </div>
           )}
 
           {/* Section 1: Identificação */}
           <div className="space-y-4">
-            <h3 className="text-sm font-semibold uppercase tracking-widest text-slate-500">
+            <h3
+              className="text-xs font-semibold uppercase tracking-widest"
+              style={{ color: 'var(--text-tertiary)', letterSpacing: '0.5px' }}
+            >
               Identificação
             </h3>
 
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                Nome da Marca <span className="text-rose-400">*</span>
+              <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                Nome da Marca <span style={{ color: 'var(--color-error)' }}>*</span>
               </label>
               <input
                 type="text"
                 value={form.name}
                 onChange={(e) => setField('name', e.target.value)}
                 placeholder="ex: Acme Corp"
-                className={inputClass()}
+                className="artisan-input"
                 autoFocus
               />
             </div>
 
             {/* Logo URL + Upload */}
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">Logo</label>
+              <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Logo</label>
               <div className="flex gap-2">
                 <input
                   type="url"
                   value={form.logo_url}
                   onChange={(e) => setField('logo_url', e.target.value)}
                   placeholder="https://example.com/logo.png"
-                  className={`${inputClass()} flex-1`}
+                  className="artisan-input flex-1"
                 />
                 <input
                   ref={fileInputRef}
@@ -365,7 +367,7 @@ function BrandModal({
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-white/[0.08] bg-white/[0.03] text-slate-400 hover:text-white hover:border-violet-500/40 transition-all text-sm whitespace-nowrap"
+                  className="btn-secondary flex items-center gap-1.5 text-sm whitespace-nowrap px-3 py-2"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -375,21 +377,26 @@ function BrandModal({
               </div>
               {logoPreview && (
                 <div className="mt-2 flex items-center gap-3">
-                  <img src={logoPreview} alt="Preview" className="w-12 h-12 rounded-lg object-contain bg-white/[0.03] border border-white/[0.06]" />
-                  <span className="text-xs text-slate-500">Preview</span>
+                  <img
+                    src={logoPreview}
+                    alt="Preview"
+                    className="w-12 h-12 rounded-lg object-contain"
+                    style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border)' }}
+                  />
+                  <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Preview</span>
                 </div>
               )}
             </div>
 
             {/* Website URL */}
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">URL do Site</label>
+              <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>URL do Site</label>
               <input
                 type="url"
                 value={form.website_url}
                 onChange={(e) => setField('website_url', e.target.value)}
                 placeholder="https://example.com"
-                className={inputClass()}
+                className="artisan-input"
               />
             </div>
           </div>
@@ -397,7 +404,10 @@ function BrandModal({
           {/* Section 2: Descoberta Automática */}
           {form.website_url.trim() && (
             <div className="space-y-3">
-              <h3 className="text-sm font-semibold uppercase tracking-widest text-slate-500">
+              <h3
+                className="text-xs font-semibold uppercase tracking-widest"
+                style={{ color: 'var(--text-tertiary)', letterSpacing: '0.5px' }}
+              >
                 Descoberta Automática
               </h3>
               <button
@@ -406,8 +416,8 @@ function BrandModal({
                 disabled={discovering}
                 className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium text-sm text-white transition-all disabled:opacity-50 relative overflow-hidden group"
                 style={{
-                  background: 'linear-gradient(135deg, #7c3aed, #c026d3)',
-                  boxShadow: '0 0 20px rgba(124, 58, 237, 0.2)',
+                  background: 'var(--accent-gradient)',
+                  boxShadow: 'var(--shadow-glow-green)',
                 }}
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -423,29 +433,33 @@ function BrandModal({
                 )}
                 <span>{discovering ? 'Descobrindo...' : 'Descobrir Marca'}</span>
               </button>
-              <p className="text-xs text-slate-600 text-center">
+              <p className="text-xs text-center" style={{ color: 'var(--text-tertiary)' }}>
                 A IA analisa o site e preenche automaticamente as diretrizes da marca
               </p>
               {discoverError && (
-                <p className="text-xs text-amber-400 text-center">{discoverError}</p>
+                <p className="text-xs text-center" style={{ color: 'var(--color-warning)' }}>{discoverError}</p>
               )}
             </div>
           )}
 
           {/* Section 3: Identidade Visual */}
           <div className="space-y-4">
-            <h3 className="text-sm font-semibold uppercase tracking-widest text-slate-500">
+            <h3
+              className="text-xs font-semibold uppercase tracking-widest"
+              style={{ color: 'var(--text-tertiary)', letterSpacing: '0.5px' }}
+            >
               Identidade Visual
             </h3>
 
             {/* Primary Colors */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="text-sm font-medium text-slate-300">Cores Primárias</label>
+                <label className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Cores Primárias</label>
                 <button
                   type="button"
                   onClick={() => addColor('primary_colors')}
-                  className="text-xs text-violet-400 hover:text-violet-300 flex items-center gap-1 transition-colors"
+                  className="text-xs flex items-center gap-1 transition-colors"
+                  style={{ color: 'var(--accent-primary)' }}
                 >
                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -469,11 +483,12 @@ function BrandModal({
             {/* Secondary Colors */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="text-sm font-medium text-slate-300">Cores Secundárias</label>
+                <label className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Cores Secundárias</label>
                 <button
                   type="button"
                   onClick={() => addColor('secondary_colors')}
-                  className="text-xs text-violet-400 hover:text-violet-300 flex items-center gap-1 transition-colors"
+                  className="text-xs flex items-center gap-1 transition-colors"
+                  style={{ color: 'var(--accent-primary)' }}
                 >
                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -497,23 +512,23 @@ function BrandModal({
             {/* Fonts */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1.5">Fonte do Título</label>
+                <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Fonte do Título</label>
                 <input
                   type="text"
                   value={form.font_heading}
                   onChange={(e) => setField('font_heading', e.target.value)}
                   placeholder="ex: Montserrat"
-                  className={inputClass()}
+                  className="artisan-input"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1.5">Fonte do Corpo</label>
+                <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Fonte do Corpo</label>
                 <input
                   type="text"
                   value={form.font_body}
                   onChange={(e) => setField('font_body', e.target.value)}
                   placeholder="ex: Inter"
-                  className={inputClass()}
+                  className="artisan-input"
                 />
               </div>
             </div>
@@ -521,66 +536,65 @@ function BrandModal({
 
           {/* Section 4: Voz & Regras */}
           <div className="space-y-4">
-            <h3 className="text-sm font-semibold uppercase tracking-widest text-slate-500">
+            <h3
+              className="text-xs font-semibold uppercase tracking-widest"
+              style={{ color: 'var(--text-tertiary)', letterSpacing: '0.5px' }}
+            >
               Voz & Regras
             </h3>
 
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">Tom de Voz</label>
+              <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Tom de Voz</label>
               <textarea
                 value={form.tone_of_voice}
                 onChange={(e) => setField('tone_of_voice', e.target.value)}
                 placeholder="Descreva o tom, personalidade e voz da marca..."
                 rows={3}
-                className={inputClass('resize-none')}
+                className="artisan-input resize-none"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                <span className="text-emerald-400 mr-1.5">&#10003;</span> Regras Do (Fazer)
+              <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+                <span style={{ color: 'var(--accent-primary)' }} className="mr-1.5">&#10003;</span> Regras Do (Fazer)
               </label>
               <RuleList
                 values={form.do_rules}
                 onChange={(v) => setField('do_rules', v)}
                 placeholder="Sempre use cores de alto contraste..."
-                accentColor="bg-emerald-400"
+                dotColor="#30D158"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                <span className="text-rose-400 mr-1.5">&#10007;</span> Regras Don't (Não Fazer)
+              <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+                <span style={{ color: 'var(--color-error)' }} className="mr-1.5">&#10007;</span> Regras Don't (Não Fazer)
               </label>
               <RuleList
                 values={form.dont_rules}
                 onChange={(v) => setField('dont_rules', v)}
                 placeholder="Nunca use mais de 3 cores..."
-                accentColor="bg-rose-400"
+                dotColor="#FF453A"
               />
             </div>
           </div>
         </form>
 
         {/* Modal footer */}
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-white/[0.06]">
+        <div className="flex items-center justify-end gap-3 px-6 py-4" style={{ borderTop: '1px solid var(--border)' }}>
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-slate-400 hover:text-white border border-white/[0.08] hover:border-white/[0.15] rounded-lg text-sm font-medium transition-all"
+            className="btn-secondary text-sm"
           >
             Cancelar
           </button>
           <button
+            type="button"
             onClick={saveForm}
             disabled={saving}
-            className="flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-semibold text-white transition-all disabled:opacity-50 relative overflow-hidden group"
-            style={{
-              background: 'linear-gradient(135deg, #7c3aed, #c026d3)',
-              boxShadow: '0 0 16px rgba(124, 58, 237, 0.2)',
-            }}
+            className="btn-primary flex items-center gap-2 text-sm"
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity" />
             {saving && (
               <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -613,8 +627,8 @@ function BrandCard({
   const websiteUrl = (brand as unknown as Record<string, unknown>).website_url as string | undefined
 
   return (
-    <div className="glass-card overflow-hidden group">
-      {/* Color strip header — gradient across brand colors */}
+    <div className="artisan-card overflow-hidden group">
+      {/* Color strip header */}
       <div className="h-1.5 flex">
         {primaryColors.length > 0 ? (
           <div
@@ -626,7 +640,7 @@ function BrandCard({
             }}
           />
         ) : (
-          <div className="flex-1 bg-gradient-to-r from-violet-600 to-fuchsia-600" />
+          <div className="flex-1" style={{ background: 'var(--accent-gradient)' }} />
         )}
       </div>
 
@@ -637,7 +651,8 @@ function BrandCard({
             <img
               src={brand.logo_url}
               alt={brand.name}
-              className="w-11 h-11 rounded-lg object-contain bg-white/[0.04] border border-white/[0.06]"
+              className="w-11 h-11 rounded-lg object-contain"
+              style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border)' }}
             />
           ) : (
             <div
@@ -645,7 +660,7 @@ function BrandCard({
               style={{
                 background: primaryColors[0]
                   ? `linear-gradient(135deg, ${primaryColors[0]}, ${primaryColors[1] ?? primaryColors[0]})`
-                  : 'linear-gradient(135deg, #7c3aed, #c026d3)',
+                  : 'var(--accent-gradient)',
               }}
             >
               <span className="text-white font-bold text-lg uppercase" style={{ fontFamily: 'var(--font-heading)' }}>
@@ -654,7 +669,7 @@ function BrandCard({
             </div>
           )}
           <div className="flex-1 min-w-0">
-            <h3 className="text-white font-semibold truncate" style={{ fontFamily: 'var(--font-heading)' }}>
+            <h3 className="font-semibold truncate" style={{ fontFamily: 'var(--font-heading)', color: 'var(--text-primary)' }}>
               {brand.name}
             </h3>
             {websiteUrl && (
@@ -662,7 +677,8 @@ function BrandCard({
                 href={websiteUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-violet-400 hover:text-violet-300 text-xs truncate block mt-0.5 transition-colors"
+                className="text-xs truncate block mt-0.5 transition-colors"
+                style={{ color: 'var(--accent-primary)' }}
               >
                 {websiteUrl.replace(/^https?:\/\//, '')}
               </a>
@@ -675,16 +691,16 @@ function BrandCard({
           {primaryColors.slice(0, 5).map((c, i) => (
             <div
               key={i}
-              className="w-5 h-5 rounded-full border border-white/[0.08] shadow-sm"
-              style={{ backgroundColor: c }}
+              className="w-5 h-5 rounded-full shadow-sm"
+              style={{ backgroundColor: c, border: '1px solid var(--border)' }}
               title={c}
             />
           ))}
           {secondaryColors.slice(0, 3).map((c, i) => (
             <div
               key={`s${i}`}
-              className="w-4 h-4 rounded-full border border-white/[0.06] opacity-70"
-              style={{ backgroundColor: c }}
+              className="w-4 h-4 rounded-full opacity-70"
+              style={{ backgroundColor: c, border: '1px solid var(--border)' }}
               title={c}
             />
           ))}
@@ -692,26 +708,27 @@ function BrandCard({
 
         {/* Fonts */}
         {(fontHeading || fontBody) && (
-          <div className="flex items-center gap-3 mb-3 text-xs text-slate-500">
+          <div className="flex items-center gap-3 mb-3 text-xs" style={{ color: 'var(--text-tertiary)' }}>
             {fontHeading && (
-              <span><span className="text-slate-600">H:</span> {fontHeading}</span>
+              <span><span style={{ color: 'var(--text-tertiary)' }}>H:</span> {fontHeading}</span>
             )}
             {fontBody && (
-              <span><span className="text-slate-600">B:</span> {fontBody}</span>
+              <span><span style={{ color: 'var(--text-tertiary)' }}>B:</span> {fontBody}</span>
             )}
           </div>
         )}
 
         {/* Tone excerpt */}
         {tone && (
-          <p className="text-slate-400 text-xs leading-relaxed line-clamp-1 mb-4">{tone}</p>
+          <p className="text-xs leading-relaxed line-clamp-1 mb-4" style={{ color: 'var(--text-secondary)' }}>{tone}</p>
         )}
 
         {/* Actions — appear on hover */}
-        <div className="flex items-center gap-2 pt-3 border-t border-white/[0.04] opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+        <div className="flex items-center gap-2 pt-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200" style={{ borderTop: '1px solid var(--border)' }}>
           <button
             onClick={onEdit}
-            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 bg-white/[0.04] hover:bg-white/[0.08] text-slate-400 hover:text-white rounded-lg text-xs font-medium transition-all"
+            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
+            style={{ background: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -720,7 +737,12 @@ function BrandCard({
           </button>
           <button
             onClick={onDelete}
-            className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-rose-500/[0.06] hover:bg-rose-500/[0.12] text-rose-400/80 hover:text-rose-300 rounded-lg text-xs font-medium transition-all border border-rose-500/10 hover:border-rose-500/20"
+            className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
+            style={{
+              background: 'rgba(255, 69, 58, 0.06)',
+              color: 'var(--color-error)',
+              border: '1px solid rgba(255, 69, 58, 0.1)',
+            }}
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -784,14 +806,19 @@ export default function BrandManagement() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8 animate-fade-in">
         <div>
-          <h1 className="text-3xl font-bold gradient-text tracking-tight">Gestão de Marcas</h1>
-          <p className="text-slate-400 mt-2 text-sm">
+          <h1
+            className="text-2xl font-bold tracking-tight"
+            style={{ fontFamily: 'var(--font-heading)', color: 'var(--text-primary)', letterSpacing: '-0.5px' }}
+          >
+            Gestão de Marcas
+          </h1>
+          <p className="mt-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
             {loading ? 'Carregando...' : `${brands.length} marca${brands.length !== 1 ? 's' : ''} cadastrada${brands.length !== 1 ? 's' : ''}`}
           </p>
         </div>
         <button
           onClick={openCreate}
-          className="btn-gradient flex items-center gap-2 text-sm"
+          className="btn-primary flex items-center gap-2 text-sm"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -801,32 +828,42 @@ export default function BrandManagement() {
       </div>
 
       {error && (
-        <div className="mb-6 p-4 glass-card-static border-rose-500/30 bg-rose-500/[0.06] rounded-xl text-rose-400 text-sm animate-slide-up">
+        <div
+          className="mb-6 p-4 rounded-xl text-sm animate-slide-up"
+          style={{
+            background: 'rgba(255, 69, 58, 0.08)',
+            border: '1px solid rgba(255, 69, 58, 0.2)',
+            color: 'var(--color-error)',
+          }}
+        >
           {error}
-          <button onClick={() => setError(null)} className="ml-3 underline hover:no-underline text-rose-300">Fechar</button>
+          <button onClick={() => setError(null)} className="ml-3 underline hover:no-underline" style={{ color: 'var(--color-error)', opacity: 0.8 }}>Fechar</button>
         </div>
       )}
 
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="glass-card-static h-64 animate-pulse rounded-xl" />
+            <div key={i} className="artisan-card-static h-64 animate-pulse rounded-xl" />
           ))}
         </div>
       ) : brands.length === 0 ? (
-        <div className="glass-card-static p-16 text-center animate-slide-up">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-600/20 to-fuchsia-600/20 flex items-center justify-center mx-auto mb-5">
-            <svg className="w-8 h-8 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="artisan-card-static p-16 text-center animate-slide-up">
+          <div
+            className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5"
+            style={{ background: 'rgba(48, 209, 88, 0.1)' }}
+          >
+            <svg className="w-8 h-8" style={{ color: 'var(--accent-primary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
             </svg>
           </div>
-          <p className="text-white text-lg font-semibold mb-2" style={{ fontFamily: 'var(--font-heading)' }}>
+          <p className="text-lg font-semibold mb-2" style={{ fontFamily: 'var(--font-heading)', color: 'var(--text-primary)' }}>
             Nenhuma marca ainda
           </p>
-          <p className="text-slate-500 text-sm mb-6">
-            Crie sua primeira marca para usar nos briefs de design
+          <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>
+            Crie sua primeira marca para usar nas artes
           </p>
-          <button onClick={openCreate} className="btn-gradient text-sm">
+          <button onClick={openCreate} className="btn-primary text-sm">
             Criar Primeira Marca
           </button>
         </div>
@@ -849,38 +886,45 @@ export default function BrandManagement() {
         <BrandModal brand={editingBrand} onClose={closeModal} onSave={handleSaved} />
       )}
 
-      {/* Delete Confirmation — Sleek inline */}
+      {/* Delete Confirmation */}
       {confirmDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
           <div
             className="w-full max-w-sm p-6 shadow-2xl rounded-2xl animate-slide-up"
             style={{
-              background: 'linear-gradient(180deg, rgba(15,16,28,0.98), rgba(10,11,20,0.99))',
-              border: '1px solid rgba(255,255,255,0.06)',
+              background: 'var(--bg-secondary)',
+              border: '1px solid var(--border)',
             }}
           >
-            <div className="w-12 h-12 bg-rose-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-rose-500/20">
-              <svg className="w-6 h-6 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div
+              className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4"
+              style={{
+                background: 'rgba(255, 69, 58, 0.1)',
+                border: '1px solid rgba(255, 69, 58, 0.2)',
+              }}
+            >
+              <svg className="w-6 h-6" style={{ color: 'var(--color-error)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
             </div>
-            <h3 className="text-white font-bold text-lg text-center mb-2" style={{ fontFamily: 'var(--font-heading)' }}>
+            <h3 className="font-bold text-lg text-center mb-2" style={{ fontFamily: 'var(--font-heading)', color: 'var(--text-primary)' }}>
               Excluir Marca
             </h3>
-            <p className="text-slate-400 text-sm text-center mb-6">
-              Tem certeza que deseja excluir <strong className="text-white">{confirmDelete.name}</strong>? Esta ação não pode ser desfeita.
+            <p className="text-sm text-center mb-6" style={{ color: 'var(--text-secondary)' }}>
+              Tem certeza que deseja excluir <strong style={{ color: 'var(--text-primary)' }}>{confirmDelete.name}</strong>? Esta ação não pode ser desfeita.
             </p>
             <div className="flex gap-3">
               <button
                 onClick={() => setConfirmDelete(null)}
-                className="flex-1 px-4 py-2.5 border border-white/[0.08] hover:border-white/[0.15] text-slate-400 hover:text-white rounded-xl text-sm font-medium transition-all"
+                className="flex-1 btn-secondary text-sm py-2.5 rounded-xl"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleDelete}
                 disabled={deletingId === confirmDelete.id}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white rounded-xl text-sm font-semibold transition-all"
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50"
+                style={{ background: 'var(--color-error)' }}
               >
                 {deletingId === confirmDelete.id && (
                   <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">

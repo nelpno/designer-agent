@@ -11,50 +11,50 @@ const statusConfig: Record<
 > = {
   pending: {
     label: 'Pendente',
-    dotColor: '#f59e0b',
-    bgColor: 'rgba(245, 158, 11, 0.1)',
-    textColor: '#fbbf24',
-    borderColor: 'rgba(245, 158, 11, 0.25)',
+    dotColor: '#FFD60A',
+    bgColor: 'rgba(255, 214, 10, 0.1)',
+    textColor: '#FFD60A',
+    borderColor: 'rgba(255, 214, 10, 0.25)',
   },
   processing: {
     label: 'Processando',
-    dotColor: '#3b82f6',
-    bgColor: 'rgba(59, 130, 246, 0.1)',
-    textColor: '#60a5fa',
-    borderColor: 'rgba(59, 130, 246, 0.25)',
+    dotColor: '#5AC8FA',
+    bgColor: 'rgba(90, 200, 250, 0.1)',
+    textColor: '#5AC8FA',
+    borderColor: 'rgba(90, 200, 250, 0.25)',
     pulse: true,
   },
   running: {
     label: 'Processando',
-    dotColor: '#3b82f6',
-    bgColor: 'rgba(59, 130, 246, 0.1)',
-    textColor: '#60a5fa',
-    borderColor: 'rgba(59, 130, 246, 0.25)',
+    dotColor: '#5AC8FA',
+    bgColor: 'rgba(90, 200, 250, 0.1)',
+    textColor: '#5AC8FA',
+    borderColor: 'rgba(90, 200, 250, 0.25)',
     pulse: true,
   },
   completed: {
     label: 'Concluído',
-    dotColor: '#10b981',
-    bgColor: 'rgba(16, 185, 129, 0.1)',
-    textColor: '#34d399',
-    borderColor: 'rgba(16, 185, 129, 0.25)',
+    dotColor: '#30D158',
+    bgColor: 'rgba(48, 209, 88, 0.1)',
+    textColor: '#30D158',
+    borderColor: 'rgba(48, 209, 88, 0.25)',
   },
   failed: {
     label: 'Falhou',
-    dotColor: '#f43f5e',
-    bgColor: 'rgba(244, 63, 94, 0.1)',
-    textColor: '#fb7185',
-    borderColor: 'rgba(244, 63, 94, 0.25)',
+    dotColor: '#FF453A',
+    bgColor: 'rgba(255, 69, 58, 0.1)',
+    textColor: '#FF453A',
+    borderColor: 'rgba(255, 69, 58, 0.25)',
   },
 }
 
 export default function StatusBadge({ status, className = '' }: StatusBadgeProps) {
   const config = statusConfig[status] ?? {
     label: status,
-    dotColor: '#94a3b8',
-    bgColor: 'rgba(148, 163, 184, 0.1)',
-    textColor: '#94a3b8',
-    borderColor: 'rgba(148, 163, 184, 0.2)',
+    dotColor: '#86868B',
+    bgColor: 'rgba(134, 134, 139, 0.1)',
+    textColor: '#86868B',
+    borderColor: 'rgba(134, 134, 139, 0.2)',
   }
 
   return (
@@ -67,7 +67,6 @@ export default function StatusBadge({ status, className = '' }: StatusBadgeProps
         color: config.textColor,
         border: `1px solid ${config.borderColor}`,
         fontFamily: 'var(--font-body)',
-        backdropFilter: 'blur(8px)',
       }}
     >
       <span

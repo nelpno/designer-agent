@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { apiClient } from '../api/client'
+import { apiClient, storageUrl } from '../api/client'
 import { Brand } from '../types'
 
 const ART_TYPES = [
@@ -42,10 +42,11 @@ const PLATFORMS = [
 ]
 
 const FORMAT_PRESETS = [
-  { label: 'Quadrado', ratio: '1:1', width: 1080, height: 1080 },
-  { label: 'Paisagem', ratio: '16:9', width: 1200, height: 628 },
-  { label: 'Story', ratio: '9:16', width: 1080, height: 1920 },
-  { label: 'Personalizado', ratio: null, width: null, height: null },
+  { label: '1:1', ratio: '1:1', width: 1080, height: 1080 },
+  { label: '9:16', ratio: '9:16', width: 1080, height: 1920 },
+  { label: '16:9', ratio: '16:9', width: 1200, height: 628 },
+  { label: '4:5', ratio: '4:5', width: 1080, height: 1350 },
+  { label: 'Custom', ratio: null, width: null, height: null },
 ]
 
 interface BriefFormData {
@@ -76,6 +77,87 @@ const DEFAULT_FORM: BriefFormData = {
   description: '',
 }
 
+/* ─── ProgressSection ─── */
+function ProgressSection({
+  number,
+  title,
+  summary,
+  isOpen,
+  isCompleted,
+  onToggle,
+  children,
+}: {
+  number: number
+  title: string
+  summary?: string
+  isOpen: boolean
+  isCompleted: boolean
+  onToggle: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <div className="artisan-card-static overflow-hidden">
+      {/* Header — always visible */}
+      <button
+        type="button"
+        onClick={onToggle}
+        className="w-full flex items-center gap-3 px-5 py-4 text-left transition-colors"
+        style={{ background: isOpen ? 'transparent' : 'transparent' }}
+        onMouseEnter={(e) => { if (!isOpen) e.currentTarget.style.background = 'var(--bg-tertiary)' }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
+      >
+        <div
+          className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold"
+          style={{
+            background: isCompleted ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+            color: isCompleted ? '#fff' : 'var(--text-secondary)',
+          }}
+        >
+          {isCompleted ? (
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+            </svg>
+          ) : (
+            number
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <span
+            className="text-sm font-semibold"
+            style={{ fontFamily: 'var(--font-heading)', color: 'var(--text-primary)' }}
+          >
+            {title}
+          </span>
+          {!isOpen && summary && (
+            <p className="text-xs mt-0.5 truncate" style={{ color: 'var(--text-secondary)' }}>
+              {summary}
+            </p>
+          )}
+        </div>
+        <svg
+          className="w-4 h-4 transition-transform duration-200 flex-shrink-0"
+          style={{
+            color: 'var(--text-tertiary)',
+            transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+          }}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {/* Content */}
+      {isOpen && (
+        <div className="px-5 pb-5 animate-slide-down">
+          {children}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function NewBrief() {
   const navigate = useNavigate()
   const [form, setForm] = useState<BriefFormData>(DEFAULT_FORM)
@@ -88,6 +170,10 @@ export default function NewBrief() {
   const [isDragOver, setIsDragOver] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [error, setError] = useState<string | null>(null)
+  const [brandSelected, setBrandSelected] = useState(false)
+
+  // Progressive sections state
+  const [openSection, setOpenSection] = useState(1)
 
   useEffect(() => {
     apiClient
@@ -219,317 +305,347 @@ export default function NewBrief() {
     }
   }
 
-  // Aspect ratio preview component
-  function FormatPreview({ ratio, selected }: { ratio: string | null; selected: boolean }) {
-    const dims: Record<string, { w: number; h: number }> = {
-      '1:1': { w: 32, h: 32 },
-      '16:9': { w: 40, h: 22 },
-      '9:16': { w: 22, h: 40 },
-    }
-    const d = ratio ? dims[ratio] : null
-    if (!d) {
-      return (
-        <div className={`w-8 h-8 border-2 border-dashed rounded ${selected ? 'border-violet-400' : 'border-white/20'} flex items-center justify-center`}>
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-        </div>
-      )
-    }
-    const scale = 0.9
-    return (
-      <div
-        className={`rounded border-2 ${selected ? 'border-violet-400 bg-violet-500/10' : 'border-white/10 bg-white/[0.02]'}`}
-        style={{ width: d.w * scale, height: d.h * scale }}
-      />
-    )
-  }
+  // Section completion checks
+  const section1Complete = brandSelected
+  const section2Complete = !!form.art_type
+  const section3Complete = true // texts are optional
+  const section4Complete = true // description is optional
+
+  // Section summaries
+  const section1Summary = selectedBrand ? selectedBrand.name : undefined
+  const section2Summary = form.art_type
+    ? `${ART_TYPES.find((t) => t.value === form.art_type)?.label ?? form.art_type} · ${FORMAT_PRESETS[selectedPreset]?.label ?? form.format}`
+    : undefined
+  const section3Summary =
+    form.headline || form.body_text || form.cta_text
+      ? [form.headline, form.cta_text].filter(Boolean).join(' · ') || 'Textos preenchidos'
+      : undefined
+  const section4Summary =
+    form.description ? form.description.slice(0, 60) + (form.description.length > 60 ? '...' : '') : undefined
 
   return (
-    <div className="p-6 lg:p-8 max-w-[1400px] mx-auto">
+    <div className="p-6 lg:p-8 max-w-[1100px] mx-auto">
       {/* Header */}
       <div className="mb-8 animate-fade-in">
-        <h1 className="text-3xl font-bold gradient-text tracking-tight">Novo Brief</h1>
-        <p className="text-slate-400 mt-2 text-sm" style={{ fontFamily: 'var(--font-body)' }}>
-          Configure todos os detalhes e deixe a IA criar o design perfeito
+        <h1
+          className="text-2xl font-bold tracking-tight"
+          style={{ fontFamily: 'var(--font-heading)', color: 'var(--text-primary)', letterSpacing: '-0.5px' }}
+        >
+          Nova Arte
+        </h1>
+        <p className="mt-2 text-sm" style={{ color: 'var(--text-secondary)', fontFamily: 'var(--font-body)' }}>
+          Configure os detalhes e deixe a IA criar o design perfeito
         </p>
       </div>
 
       {error && (
-        <div className="mb-6 p-4 glass-card-static border-rose-500/30 bg-rose-500/[0.06] rounded-xl text-rose-400 text-sm animate-slide-up">
+        <div
+          className="mb-6 p-4 rounded-xl text-sm animate-slide-up"
+          style={{
+            background: 'rgba(255, 69, 58, 0.08)',
+            border: '1px solid rgba(255, 69, 58, 0.2)',
+            color: 'var(--color-error)',
+          }}
+        >
           {error}
         </div>
       )}
 
       <form onSubmit={handleSubmit}>
         <div className="flex flex-col lg:flex-row gap-6">
-          {/* LEFT PANEL — Configuração do Design (55%) */}
-          <div className="flex-[11] space-y-6 animate-slide-up" style={{ animationDelay: '60ms' }}>
-            <div className="glass-card-static p-6 space-y-6">
-              <h2 className="text-white font-semibold text-base" style={{ fontFamily: 'var(--font-heading)' }}>
-                Configuração do Design
-              </h2>
+          {/* Main column */}
+          <div className="flex-1 space-y-4 animate-slide-up" style={{ animationDelay: '60ms' }}>
 
-              {/* Art Type — Icon Cards */}
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-3">
-                  Tipo de Arte <span className="text-rose-400 ml-0.5">*</span>
-                </label>
-                <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 gap-2">
-                  {ART_TYPES.map((t) => {
-                    const isSelected = form.art_type === t.value
-                    return (
-                      <button
-                        key={t.value}
-                        type="button"
-                        onClick={() => setField('art_type', t.value)}
-                        className={`relative flex flex-col items-center gap-1.5 px-3 py-3 rounded-xl border text-xs font-medium transition-all duration-200 ${
-                          isSelected
-                            ? 'border-violet-500/60 bg-violet-500/[0.08] text-white shadow-[0_0_16px_rgba(124,58,237,0.15)]'
-                            : 'border-white/[0.06] bg-white/[0.02] text-slate-400 hover:border-white/[0.12] hover:bg-white/[0.04] hover:text-slate-200'
-                        }`}
-                      >
-                        <span className={isSelected ? 'text-violet-400' : 'text-slate-500'}>{t.icon}</span>
-                        <span className="text-center leading-tight">{t.label}</span>
-                        {isSelected && (
-                          <div className="absolute -top-px -left-px -right-px -bottom-px rounded-xl border border-violet-500/40 pointer-events-none" />
-                        )}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-
-              {/* Platform — Horizontal Pills */}
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-3">
-                  Plataforma <span className="text-rose-400 ml-0.5">*</span>
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {PLATFORMS.map((p) => {
-                    const isSelected = form.platform === p.value
-                    return (
-                      <button
-                        key={p.value}
-                        type="button"
-                        onClick={() => setField('platform', p.value)}
-                        className={`px-4 py-2 rounded-full text-sm font-medium border transition-all duration-200 ${
-                          isSelected
-                            ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 border-transparent text-white shadow-[0_0_12px_rgba(124,58,237,0.25)]'
-                            : 'border-white/[0.08] bg-white/[0.02] text-slate-400 hover:border-white/[0.15] hover:text-white'
-                        }`}
-                      >
-                        {p.label}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-
-              {/* Format — Visual Cards */}
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-3">Formato</label>
-                <div className="grid grid-cols-4 gap-2">
-                  {FORMAT_PRESETS.map((preset, idx) => {
-                    const isSelected = selectedPreset === idx
-                    return (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => handlePresetClick(idx)}
-                        className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition-all duration-200 ${
-                          isSelected
-                            ? 'border-violet-500/50 bg-violet-500/[0.06] text-white'
-                            : 'border-white/[0.06] bg-white/[0.02] text-slate-400 hover:border-white/[0.12] hover:text-slate-200'
-                        }`}
-                      >
-                        <FormatPreview ratio={preset.ratio} selected={isSelected} />
-                        <span className="text-xs font-medium">{preset.label}</span>
-                        {preset.ratio && (
-                          <span className={`text-[10px] ${isSelected ? 'text-violet-400' : 'text-slate-600'}`}>
-                            {preset.ratio}
-                          </span>
-                        )}
-                      </button>
-                    )
-                  })}
-                </div>
-                {isCustomFormat && (
-                  <div className="flex items-center gap-3 mt-3">
-                    <div className="flex-1">
-                      <label className="block text-xs text-slate-500 mb-1">Largura (px)</label>
-                      <input
-                        type="number"
-                        value={form.custom_width}
-                        onChange={(e) => setField('custom_width', parseInt(e.target.value) || 1080)}
-                        min={100}
-                        max={4096}
-                        className="w-full px-3 py-2 bg-white/[0.03] border border-white/[0.08] rounded-lg text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent text-sm"
-                      />
-                    </div>
-                    <div className="pt-5 text-slate-600 font-medium">x</div>
-                    <div className="flex-1">
-                      <label className="block text-xs text-slate-500 mb-1">Altura (px)</label>
-                      <input
-                        type="number"
-                        value={form.custom_height}
-                        onChange={(e) => setField('custom_height', parseInt(e.target.value) || 1080)}
-                        min={100}
-                        max={4096}
-                        className="w-full px-3 py-2 bg-white/[0.03] border border-white/[0.08] rounded-lg text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent text-sm"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Brand — Dropdown with color swatches */}
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Marca</label>
-                <div className="relative">
-                  <select
-                    value={form.brand_id}
-                    onChange={(e) => setField('brand_id', e.target.value)}
-                    className="w-full px-3 py-2.5 bg-white/[0.03] border border-white/[0.08] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent text-sm appearance-none cursor-pointer"
-                  >
-                    <option value="">Sem marca (genérico)</option>
-                    {brands.map((b) => (
-                      <option key={b.id} value={b.id}>
-                        {b.name}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                  </div>
-                </div>
-                {selectedBrand && selectedBrand.primary_colors.length > 0 && (
-                  <div className="flex items-center gap-1.5 mt-2">
-                    {selectedBrand.primary_colors.slice(0, 5).map((c, i) => (
-                      <div key={i} className="w-4 h-4 rounded-full border border-white/10" style={{ backgroundColor: c }} />
-                    ))}
-                    {selectedBrand.secondary_colors.slice(0, 3).map((c, i) => (
-                      <div key={`s${i}`} className="w-3.5 h-3.5 rounded-full border border-white/10 opacity-60" style={{ backgroundColor: c }} />
-                    ))}
-                    <span className="text-xs text-slate-500 ml-1">{selectedBrand.name}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Textos Section */}
-            <div className="glass-card-static p-6 space-y-4">
-              <h2 className="text-white font-semibold text-base" style={{ fontFamily: 'var(--font-heading)' }}>
-                Textos
-              </h2>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1.5">Título</label>
-                <input
-                  type="text"
-                  value={form.headline}
-                  onChange={(e) => setField('headline', e.target.value)}
-                  placeholder="Texto principal do título"
-                  className="w-full px-3 py-2.5 bg-white/[0.03] border border-white/[0.08] rounded-lg text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1.5">Texto</label>
-                <textarea
-                  value={form.body_text}
-                  onChange={(e) => setField('body_text', e.target.value)}
-                  placeholder="Texto de apoio..."
-                  rows={3}
-                  className="w-full px-3 py-2.5 bg-white/[0.03] border border-white/[0.08] rounded-lg text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent text-sm resize-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1.5">CTA</label>
-                <input
-                  type="text"
-                  value={form.cta_text}
-                  onChange={(e) => setField('cta_text', e.target.value)}
-                  placeholder="ex: Compre Agora, Saiba Mais, Cadastre-se"
-                  className="w-full px-3 py-2.5 bg-white/[0.03] border border-white/[0.08] rounded-lg text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent text-sm"
-                />
-              </div>
-            </div>
-
-            {/* Reference URLs */}
-            <div className="glass-card-static p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h2 className="text-white font-semibold text-base" style={{ fontFamily: 'var(--font-heading)' }}>
-                    URLs de Referência
-                  </h2>
-                  <p className="text-slate-500 text-xs mt-0.5">Links para imagens ou designs de referência</p>
-                </div>
+            {/* Section 1: Marca */}
+            <ProgressSection
+              number={1}
+              title="Marca"
+              summary={section1Summary}
+              isOpen={openSection === 1}
+              isCompleted={section1Complete}
+              onToggle={() => setOpenSection(openSection === 1 ? 0 : 1)}
+            >
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {/* No brand option */}
                 <button
                   type="button"
-                  onClick={addReferenceUrl}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-white/[0.08] bg-white/[0.03] text-slate-400 hover:text-white hover:border-white/[0.15] transition-all"
+                  onClick={() => {
+                    setField('brand_id', '')
+                    setBrandSelected(true)
+                    setOpenSection(2)
+                  }}
+                  className="flex flex-col items-center gap-2 p-4 rounded-xl border text-sm font-medium transition-all duration-200"
+                  style={{
+                    borderColor: form.brand_id === '' ? 'var(--accent-primary)' : 'var(--border)',
+                    background: form.brand_id === '' ? 'rgba(48, 209, 88, 0.06)' : 'var(--bg-tertiary)',
+                    color: form.brand_id === '' ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                  }}
                 >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                  Adicionar URL
-                </button>
-              </div>
-              <div className="space-y-2">
-                {form.reference_urls.map((url, idx) => (
-                  <div key={idx} className="flex items-center gap-2">
-                    <input
-                      type="url"
-                      value={url}
-                      onChange={(e) => updateReferenceUrl(idx, e.target.value)}
-                      placeholder="https://example.com/reference.jpg"
-                      className="flex-1 px-3 py-2.5 bg-white/[0.03] border border-white/[0.08] rounded-lg text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent text-sm"
-                    />
-                    {form.reference_urls.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeReferenceUrl(idx)}
-                        className="p-2 text-slate-600 hover:text-rose-400 transition-colors"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
-                    )}
+                  <div
+                    className="w-10 h-10 rounded-lg flex items-center justify-center"
+                    style={{ background: 'var(--bg-secondary)' }}
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                    </svg>
                   </div>
-                ))}
-              </div>
-            </div>
-          </div>
+                  <span className="text-xs">Genérico</span>
+                </button>
 
-          {/* RIGHT PANEL — Detalhes & Contexto (45%) */}
-          <div className="flex-[9] space-y-6 animate-slide-up" style={{ animationDelay: '120ms' }}>
-            {/* Description */}
-            <div className="glass-card-static p-6 flex flex-col" style={{ minHeight: '380px' }}>
-              <div className="mb-4">
-                <h2 className="text-white font-semibold text-base" style={{ fontFamily: 'var(--font-heading)' }}>
-                  Descrição Detalhada
-                </h2>
-                <p className="text-slate-500 text-xs mt-1">
-                  Quanto mais detalhes, melhor será o resultado da IA
-                </p>
+                {brands.map((b) => {
+                  const isSelected = form.brand_id === b.id
+                  return (
+                    <button
+                      key={b.id}
+                      type="button"
+                      onClick={() => {
+                        setField('brand_id', b.id)
+                        setBrandSelected(true)
+                        setOpenSection(2)
+                      }}
+                      className="flex flex-col items-center gap-2 p-4 rounded-xl border text-sm font-medium transition-all duration-200"
+                      style={{
+                        borderColor: isSelected ? 'var(--accent-primary)' : 'var(--border)',
+                        background: isSelected ? 'rgba(48, 209, 88, 0.06)' : 'var(--bg-tertiary)',
+                        color: isSelected ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                      }}
+                    >
+                      {b.logo_url ? (
+                        <img
+                          src={b.logo_url.startsWith('data:') ? b.logo_url : storageUrl(b.logo_url)}
+                          alt={b.name}
+                          className="w-10 h-10 rounded-lg object-contain"
+                          style={{ background: 'var(--bg-secondary)' }}
+                        />
+                      ) : (
+                        <div
+                          className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold"
+                          style={{
+                            background: b.primary_colors[0]
+                              ? `linear-gradient(135deg, ${b.primary_colors[0]}, ${b.primary_colors[1] ?? b.primary_colors[0]})`
+                              : 'var(--accent-gradient)',
+                          }}
+                        >
+                          {b.name.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      <span className="text-xs truncate w-full text-center">{b.name}</span>
+                    </button>
+                  )
+                })}
               </div>
-              <textarea
-                value={form.description}
-                onChange={(e) => setField('description', e.target.value)}
-                placeholder="Descreva a arte que você imagina...&#10;&#10;Exemplo: Um criativo vibrante para uma promoção de verão, com cena de praia e cores vivas. O tom deve ser energético e divertido, voltado para jovens adultos de 18 a 35 anos..."
-                className="flex-1 px-4 py-3 bg-white/[0.02] border border-white/[0.06] rounded-xl text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500/30 text-sm resize-none min-h-[220px] leading-relaxed"
-              />
+            </ProgressSection>
 
-              {/* Suggest Texts Button */}
-              {form.art_type && form.description && (
-                <div className="mt-3">
+            {/* Section 2: Tipo & Formato */}
+            <ProgressSection
+              number={2}
+              title="Tipo & Formato"
+              summary={section2Summary}
+              isOpen={openSection === 2}
+              isCompleted={section2Complete}
+              onToggle={() => setOpenSection(openSection === 2 ? 0 : 2)}
+            >
+              <div className="space-y-5">
+                {/* Art Type */}
+                <div>
+                  <label
+                    className="block text-xs font-semibold uppercase tracking-wide mb-3"
+                    style={{ color: 'var(--text-secondary)', letterSpacing: '0.5px' }}
+                  >
+                    Tipo de Arte
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {ART_TYPES.map((t) => {
+                      const isSelected = form.art_type === t.value
+                      return (
+                        <button
+                          key={t.value}
+                          type="button"
+                          onClick={() => setField('art_type', t.value)}
+                          className="relative flex flex-col items-center gap-1.5 px-3 py-3 rounded-xl border text-xs font-medium transition-all duration-200"
+                          style={{
+                            borderColor: isSelected ? 'var(--accent-primary)' : 'var(--border)',
+                            background: isSelected ? 'rgba(48, 209, 88, 0.06)' : 'var(--bg-tertiary)',
+                            color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)',
+                          }}
+                        >
+                          <span style={{ color: isSelected ? 'var(--accent-primary)' : 'var(--text-tertiary)' }}>
+                            {t.icon}
+                          </span>
+                          <span className="text-center leading-tight">{t.label}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Platform */}
+                <div>
+                  <label
+                    className="block text-xs font-semibold uppercase tracking-wide mb-3"
+                    style={{ color: 'var(--text-secondary)', letterSpacing: '0.5px' }}
+                  >
+                    Plataforma
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {PLATFORMS.map((p) => {
+                      const isSelected = form.platform === p.value
+                      return (
+                        <button
+                          key={p.value}
+                          type="button"
+                          onClick={() => setField('platform', p.value)}
+                          className="px-4 py-2 rounded-lg text-sm font-medium border transition-all duration-200"
+                          style={{
+                            borderColor: isSelected ? 'var(--accent-primary)' : 'var(--border)',
+                            background: isSelected ? 'rgba(48, 209, 88, 0.08)' : 'transparent',
+                            color: isSelected ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                          }}
+                        >
+                          {p.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Format */}
+                <div>
+                  <label
+                    className="block text-xs font-semibold uppercase tracking-wide mb-3"
+                    style={{ color: 'var(--text-secondary)', letterSpacing: '0.5px' }}
+                  >
+                    Formato
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {FORMAT_PRESETS.map((preset, idx) => {
+                      const isSelected = selectedPreset === idx
+                      return (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => handlePresetClick(idx)}
+                          className="px-4 py-2 rounded-lg text-sm font-medium border transition-all duration-200"
+                          style={{
+                            borderColor: isSelected ? 'var(--accent-primary)' : 'var(--border)',
+                            background: isSelected ? 'rgba(48, 209, 88, 0.08)' : 'transparent',
+                            color: isSelected ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                          }}
+                        >
+                          {preset.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  {isCustomFormat && (
+                    <div className="flex items-center gap-3 mt-3">
+                      <div className="flex-1">
+                        <label className="block text-xs mb-1" style={{ color: 'var(--text-tertiary)' }}>Largura (px)</label>
+                        <input
+                          type="number"
+                          value={form.custom_width}
+                          onChange={(e) => setField('custom_width', parseInt(e.target.value) || 1080)}
+                          min={100}
+                          max={4096}
+                          className="artisan-input"
+                        />
+                      </div>
+                      <div className="pt-5 font-medium" style={{ color: 'var(--text-tertiary)' }}>x</div>
+                      <div className="flex-1">
+                        <label className="block text-xs mb-1" style={{ color: 'var(--text-tertiary)' }}>Altura (px)</label>
+                        <input
+                          type="number"
+                          value={form.custom_height}
+                          onChange={(e) => setField('custom_height', parseInt(e.target.value) || 1080)}
+                          min={100}
+                          max={4096}
+                          className="artisan-input"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Advance button */}
+                {form.art_type && (
+                  <button
+                    type="button"
+                    onClick={() => setOpenSection(3)}
+                    className="w-full py-2.5 rounded-lg text-sm font-medium transition-all"
+                    style={{
+                      background: 'rgba(48, 209, 88, 0.08)',
+                      color: 'var(--accent-primary)',
+                      border: '1px solid rgba(48, 209, 88, 0.2)',
+                    }}
+                  >
+                    Continuar →
+                  </button>
+                )}
+              </div>
+            </ProgressSection>
+
+            {/* Section 3: Textos */}
+            <ProgressSection
+              number={3}
+              title="Textos"
+              summary={section3Summary}
+              isOpen={openSection === 3}
+              isCompleted={openSection > 3 && section3Complete}
+              onToggle={() => setOpenSection(openSection === 3 ? 0 : 3)}
+            >
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                    Título
+                  </label>
+                  <input
+                    type="text"
+                    value={form.headline}
+                    onChange={(e) => setField('headline', e.target.value)}
+                    placeholder="Texto principal do título"
+                    className="artisan-input"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                    Texto
+                  </label>
+                  <textarea
+                    value={form.body_text}
+                    onChange={(e) => setField('body_text', e.target.value)}
+                    placeholder="Texto de apoio..."
+                    rows={3}
+                    className="artisan-input resize-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                    CTA
+                  </label>
+                  <input
+                    type="text"
+                    value={form.cta_text}
+                    onChange={(e) => setField('cta_text', e.target.value)}
+                    placeholder="ex: Compre Agora, Saiba Mais, Cadastre-se"
+                    className="artisan-input"
+                  />
+                </div>
+
+                {/* Suggest texts with AI */}
+                {form.art_type && (
                   <button
                     type="button"
                     onClick={handleSuggestTexts}
                     disabled={suggesting}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-violet-400 border border-violet-500/40 bg-violet-500/[0.05] hover:bg-violet-500/[0.10] hover:border-violet-500/60 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-                    style={{ fontFamily: 'var(--font-heading)' }}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{
+                      color: 'var(--accent-secondary)',
+                      border: '1px solid rgba(90, 200, 250, 0.3)',
+                      background: 'rgba(90, 200, 250, 0.06)',
+                      fontFamily: 'var(--font-heading)',
+                    }}
                   >
                     {suggesting ? (
                       <>
@@ -548,178 +664,373 @@ export default function NewBrief() {
                       </>
                     )}
                   </button>
-                </div>
-              )}
+                )}
 
-              {/* Upload area */}
-              <div className="mt-4">
-                {/* Hidden file input */}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  className="hidden"
-                  onChange={(e) => e.target.files && handleUpload(e.target.files)}
-                />
-
-                {/* Drop zone */}
-                <div
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => fileInputRef.current?.click()}
-                  onKeyDown={(e) => e.key === 'Enter' && fileInputRef.current?.click()}
-                  onDragOver={(e) => { e.preventDefault(); setIsDragOver(true) }}
-                  onDragLeave={() => setIsDragOver(false)}
-                  onDrop={(e) => {
-                    e.preventDefault()
-                    setIsDragOver(false)
-                    if (e.dataTransfer.files.length) handleUpload(e.dataTransfer.files)
+                <button
+                  type="button"
+                  onClick={() => setOpenSection(4)}
+                  className="w-full py-2.5 rounded-lg text-sm font-medium transition-all"
+                  style={{
+                    background: 'rgba(48, 209, 88, 0.08)',
+                    color: 'var(--accent-primary)',
+                    border: '1px solid rgba(48, 209, 88, 0.2)',
                   }}
-                  className={`w-full flex flex-col items-center justify-center gap-2 px-4 py-5 border-2 border-dashed rounded-xl cursor-pointer transition-all duration-200 ${
-                    isDragOver
-                      ? 'border-violet-500/60 bg-violet-500/[0.07] text-violet-300'
-                      : 'border-white/[0.08] hover:border-violet-500/30 bg-white/[0.01] hover:bg-violet-500/[0.03] text-slate-500 hover:text-slate-300'
-                  }`}
                 >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                  </svg>
-                  <span className="text-sm font-medium">Enviar Imagens de Referência</span>
-                  <span className="text-xs text-slate-600">Arraste imagens aqui ou clique para enviar</span>
+                  Continuar →
+                </button>
+              </div>
+            </ProgressSection>
+
+            {/* Section 4: Descrição & Referências */}
+            <ProgressSection
+              number={4}
+              title="Descrição & Referências"
+              summary={section4Summary}
+              isOpen={openSection === 4}
+              isCompleted={openSection > 4 && section4Complete}
+              onToggle={() => setOpenSection(openSection === 4 ? 0 : 4)}
+            >
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                    Descrição Detalhada
+                  </label>
+                  <p className="text-xs mb-2" style={{ color: 'var(--text-tertiary)' }}>
+                    Quanto mais detalhes, melhor será o resultado da IA
+                  </p>
+                  <textarea
+                    value={form.description}
+                    onChange={(e) => setField('description', e.target.value)}
+                    placeholder="Descreva a arte que você imagina..."
+                    rows={5}
+                    className="artisan-input resize-none"
+                  />
                 </div>
 
-                {/* Thumbnails grid */}
-                {uploadedRefs.length > 0 && (
-                  <div className="mt-3 grid grid-cols-3 gap-2">
-                    {uploadedRefs.map((ref, idx) => (
-                      <div key={idx} className="relative group rounded-lg overflow-hidden border border-white/[0.08] bg-white/[0.02]">
-                        <img
-                          src={ref.url}
-                          alt={ref.filename}
-                          className="w-full h-20 object-cover"
+                {/* Reference URLs */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
+                      URLs de Referência
+                    </label>
+                    <button
+                      type="button"
+                      onClick={addReferenceUrl}
+                      className="flex items-center gap-1.5 text-xs font-medium transition-colors"
+                      style={{ color: 'var(--accent-primary)' }}
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      Adicionar URL
+                    </button>
+                  </div>
+                  <div className="space-y-2">
+                    {form.reference_urls.map((url, idx) => (
+                      <div key={idx} className="flex items-center gap-2">
+                        <input
+                          type="url"
+                          value={url}
+                          onChange={(e) => updateReferenceUrl(idx, e.target.value)}
+                          placeholder="https://example.com/reference.jpg"
+                          className="artisan-input"
                         />
-                        <button
-                          type="button"
-                          onClick={() => removeUploadedRef(idx)}
-                          className="absolute top-1 right-1 p-0.5 rounded-full bg-black/60 text-white/70 hover:text-white hover:bg-rose-500/80 opacity-0 group-hover:opacity-100 transition-all duration-150"
-                          title="Remover"
-                        >
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                        <div className="absolute bottom-0 left-0 right-0 px-1.5 py-1 bg-black/50 text-[10px] text-slate-300 truncate opacity-0 group-hover:opacity-100 transition-opacity">
-                          {ref.filename}
-                        </div>
+                        {form.reference_urls.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeReferenceUrl(idx)}
+                            className="p-2 transition-colors"
+                            style={{ color: 'var(--text-tertiary)' }}
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        )}
                       </div>
                     ))}
                   </div>
-                )}
-              </div>
-            </div>
+                </div>
 
-            {/* Live Summary Card */}
-            <div className="glass-card-static p-5 overflow-hidden">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <h3 className="text-xs font-semibold uppercase tracking-widest text-slate-500">
-                  Resumo em Tempo Real
-                </h3>
+                {/* Upload area */}
+                <div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => e.target.files && handleUpload(e.target.files)}
+                  />
+
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => fileInputRef.current?.click()}
+                    onKeyDown={(e) => e.key === 'Enter' && fileInputRef.current?.click()}
+                    onDragOver={(e) => { e.preventDefault(); setIsDragOver(true) }}
+                    onDragLeave={() => setIsDragOver(false)}
+                    onDrop={(e) => {
+                      e.preventDefault()
+                      setIsDragOver(false)
+                      if (e.dataTransfer.files.length) handleUpload(e.dataTransfer.files)
+                    }}
+                    className="w-full flex flex-col items-center justify-center gap-2 px-4 py-5 border-2 border-dashed rounded-xl cursor-pointer transition-all duration-200"
+                    style={{
+                      borderColor: isDragOver ? 'var(--accent-primary)' : 'var(--border)',
+                      background: isDragOver ? 'rgba(48, 209, 88, 0.06)' : 'transparent',
+                      color: isDragOver ? 'var(--accent-primary)' : 'var(--text-tertiary)',
+                    }}
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                    <span className="text-sm font-medium">Enviar Imagens de Referência</span>
+                    <span className="text-xs">Arraste imagens aqui ou clique para enviar</span>
+                  </div>
+
+                  {uploadedRefs.length > 0 && (
+                    <div className="mt-3 grid grid-cols-3 gap-2">
+                      {uploadedRefs.map((ref, idx) => (
+                        <div key={idx} className="relative group rounded-lg overflow-hidden" style={{ border: '1px solid var(--border)' }}>
+                          <img
+                            src={storageUrl(ref.url)}
+                            alt={ref.filename}
+                            className="w-full h-20 object-cover"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeUploadedRef(idx)}
+                            className="absolute top-1 right-1 p-0.5 rounded-full bg-black/60 text-white/70 hover:text-white hover:bg-red-500/80 opacity-0 group-hover:opacity-100 transition-all duration-150"
+                            title="Remover"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setOpenSection(5)}
+                  className="w-full py-2.5 rounded-lg text-sm font-medium transition-all"
+                  style={{
+                    background: 'rgba(48, 209, 88, 0.08)',
+                    color: 'var(--accent-primary)',
+                    border: '1px solid rgba(48, 209, 88, 0.2)',
+                  }}
+                >
+                  Continuar →
+                </button>
+              </div>
+            </ProgressSection>
+
+            {/* Section 5: Resumo & Gerar */}
+            <ProgressSection
+              number={5}
+              title="Resumo & Gerar"
+              isOpen={openSection === 5}
+              isCompleted={false}
+              onToggle={() => setOpenSection(openSection === 5 ? 0 : 5)}
+            >
+              <div className="space-y-4">
+                {/* Summary */}
+                <div
+                  className="rounded-xl p-4"
+                  style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border)' }}
+                >
+                  <dl className="space-y-3">
+                    {form.brand_id && selectedBrand && (
+                      <div className="flex items-center justify-between">
+                        <dt className="text-sm" style={{ color: 'var(--text-secondary)' }}>Marca</dt>
+                        <dd className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                          {selectedBrand.name}
+                        </dd>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between">
+                      <dt className="text-sm" style={{ color: 'var(--text-secondary)' }}>Tipo de Arte</dt>
+                      <dd className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                        {form.art_type
+                          ? ART_TYPES.find((t) => t.value === form.art_type)?.label ?? form.art_type
+                          : <span style={{ color: 'var(--text-tertiary)' }}>Não selecionado</span>
+                        }
+                      </dd>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <dt className="text-sm" style={{ color: 'var(--text-secondary)' }}>Plataforma</dt>
+                      <dd className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                        {PLATFORMS.find((p) => p.value === form.platform)?.label ?? form.platform}
+                      </dd>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <dt className="text-sm" style={{ color: 'var(--text-secondary)' }}>Formato</dt>
+                      <dd className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                        {form.format === 'custom'
+                          ? `${form.custom_width} x ${form.custom_height}`
+                          : FORMAT_PRESETS[selectedPreset]?.label ?? form.format}
+                      </dd>
+                    </div>
+                    {form.headline && (
+                      <div className="pt-2" style={{ borderTop: '1px solid var(--border)' }}>
+                        <dt className="text-xs mb-1" style={{ color: 'var(--text-tertiary)' }}>Título</dt>
+                        <dd className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                          "{form.headline}"
+                        </dd>
+                      </div>
+                    )}
+                  </dl>
+                </div>
+
+                {/* Generate button */}
+                <button
+                  type="submit"
+                  disabled={submitting || !form.art_type}
+                  className="w-full flex items-center justify-center gap-3 px-8 py-4 rounded-xl font-semibold text-base text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 relative overflow-hidden group"
+                  style={{
+                    background: 'var(--accent-gradient)',
+                    boxShadow: submitting ? 'none' : 'var(--shadow-glow-green)',
+                    fontFamily: 'var(--font-heading)',
+                  }}
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  {submitting ? (
+                    <>
+                      <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                      <span>Gerando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                      <span>Gerar Arte</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </ProgressSection>
+          </div>
+
+          {/* Sidebar Preview (desktop only) */}
+          <div className="hidden lg:block w-64 flex-shrink-0">
+            <div className="sticky top-8 space-y-4 animate-slide-up" style={{ animationDelay: '120ms' }}>
+              <div className="artisan-card-static p-5">
+                <div className="flex items-center gap-2 mb-4">
+                  <div
+                    className="w-2 h-2 rounded-full animate-pulse"
+                    style={{ background: 'var(--accent-primary)' }}
+                  />
+                  <h3
+                    className="text-xs font-semibold uppercase tracking-widest"
+                    style={{ color: 'var(--text-tertiary)', letterSpacing: '0.5px' }}
+                  >
+                    Preview
+                  </h3>
+                </div>
+
+                <div
+                  className="rounded-xl p-4"
+                  style={{
+                    border: '1px solid var(--border)',
+                    background: selectedBrand?.primary_colors?.[0]
+                      ? `linear-gradient(135deg, ${selectedBrand.primary_colors[0]}08, transparent)`
+                      : 'var(--bg-tertiary)',
+                  }}
+                >
+                  <dl className="space-y-3 text-xs">
+                    {/* Brand */}
+                    <div className="flex items-center justify-between">
+                      <dt style={{ color: 'var(--text-tertiary)' }}>Marca</dt>
+                      <dd className="font-medium" style={{ color: 'var(--text-primary)' }}>
+                        {selectedBrand?.name ?? 'Genérico'}
+                      </dd>
+                    </div>
+
+                    {/* Art type */}
+                    <div className="flex items-center justify-between">
+                      <dt style={{ color: 'var(--text-tertiary)' }}>Tipo</dt>
+                      <dd className="font-medium" style={{ color: 'var(--text-primary)' }}>
+                        {form.art_type
+                          ? ART_TYPES.find((t) => t.value === form.art_type)?.label ?? '--'
+                          : <span style={{ color: 'var(--text-tertiary)' }}>--</span>
+                        }
+                      </dd>
+                    </div>
+
+                    {/* Platform */}
+                    <div className="flex items-center justify-between">
+                      <dt style={{ color: 'var(--text-tertiary)' }}>Plataforma</dt>
+                      <dd className="font-medium" style={{ color: 'var(--text-primary)' }}>
+                        {PLATFORMS.find((p) => p.value === form.platform)?.label}
+                      </dd>
+                    </div>
+
+                    {/* Format */}
+                    <div className="flex items-center justify-between">
+                      <dt style={{ color: 'var(--text-tertiary)' }}>Formato</dt>
+                      <dd className="font-medium" style={{ color: 'var(--text-primary)' }}>
+                        {FORMAT_PRESETS[selectedPreset]?.label ?? form.format}
+                      </dd>
+                    </div>
+
+                    {/* Brand colors */}
+                    {selectedBrand && selectedBrand.primary_colors.length > 0 && (
+                      <div className="pt-2" style={{ borderTop: '1px solid var(--border)' }}>
+                        <dt className="mb-1.5" style={{ color: 'var(--text-tertiary)' }}>Cores</dt>
+                        <dd className="flex gap-1">
+                          {selectedBrand.primary_colors.slice(0, 5).map((c, i) => (
+                            <div
+                              key={i}
+                              className="w-4 h-4 rounded-full"
+                              style={{ backgroundColor: c, border: '1px solid var(--border)' }}
+                            />
+                          ))}
+                        </dd>
+                      </div>
+                    )}
+
+                    {/* Headline preview */}
+                    {form.headline && (
+                      <div className="pt-2" style={{ borderTop: '1px solid var(--border)' }}>
+                        <dt className="mb-1" style={{ color: 'var(--text-tertiary)' }}>Título</dt>
+                        <dd className="font-medium leading-snug" style={{ color: 'var(--text-primary)' }}>
+                          "{form.headline}"
+                        </dd>
+                      </div>
+                    )}
+                  </dl>
+                </div>
               </div>
 
-              <div
-                className="rounded-xl p-4 border"
+              {/* Sidebar generate button */}
+              <button
+                type="submit"
+                form="brief-form"
+                disabled={submitting || !form.art_type}
+                onClick={handleSubmit as unknown as () => void}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold text-sm text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
                 style={{
-                  borderColor: selectedBrand?.primary_colors?.[0]
-                    ? `${selectedBrand.primary_colors[0]}33`
-                    : 'rgba(255,255,255,0.06)',
-                  background: selectedBrand?.primary_colors?.[0]
-                    ? `linear-gradient(135deg, ${selectedBrand.primary_colors[0]}08, transparent)`
-                    : 'rgba(255,255,255,0.02)',
+                  background: form.art_type ? 'var(--accent-gradient)' : 'var(--bg-tertiary)',
+                  boxShadow: form.art_type && !submitting ? 'var(--shadow-glow-green)' : 'none',
+                  fontFamily: 'var(--font-heading)',
+                  color: form.art_type ? '#fff' : 'var(--text-tertiary)',
                 }}
               >
-                <dl className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <dt className="text-slate-500 text-sm">Tipo de Arte</dt>
-                    <dd className="text-slate-200 text-sm font-medium">
-                      {form.art_type
-                        ? ART_TYPES.find((t) => t.value === form.art_type)?.label ?? '--'
-                        : <span className="text-slate-600">Selecione</span>
-                      }
-                    </dd>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <dt className="text-slate-500 text-sm">Plataforma</dt>
-                    <dd className="text-slate-200 text-sm font-medium">
-                      {PLATFORMS.find((p) => p.value === form.platform)?.label ?? form.platform}
-                    </dd>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <dt className="text-slate-500 text-sm">Formato</dt>
-                    <dd className="text-slate-200 text-sm font-medium">
-                      {form.format === 'custom'
-                        ? `${form.custom_width} x ${form.custom_height}`
-                        : FORMAT_PRESETS[selectedPreset]?.label ?? form.format}
-                    </dd>
-                  </div>
-                  {form.brand_id && (
-                    <div className="flex items-center justify-between">
-                      <dt className="text-slate-500 text-sm">Marca</dt>
-                      <dd className="flex items-center gap-2">
-                        {selectedBrand?.primary_colors?.[0] && (
-                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: selectedBrand.primary_colors[0] }} />
-                        )}
-                        <span className="text-slate-200 text-sm font-medium">
-                          {selectedBrand?.name ?? form.brand_id}
-                        </span>
-                      </dd>
-                    </div>
-                  )}
-                  {form.headline && (
-                    <div className="pt-2 border-t border-white/[0.04]">
-                      <dt className="text-slate-500 text-xs mb-1">Título</dt>
-                      <dd className="text-white text-sm font-medium leading-snug">
-                        "{form.headline}"
-                      </dd>
-                    </div>
-                  )}
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Generate Button — Full Width */}
-        <div className="mt-8 animate-slide-up" style={{ animationDelay: '180ms' }}>
-          <button
-            type="submit"
-            disabled={submitting}
-            className="w-full flex items-center justify-center gap-3 px-8 py-4 rounded-xl font-semibold text-base text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 relative overflow-hidden group"
-            style={{
-              background: 'linear-gradient(135deg, #7c3aed, #c026d3)',
-              boxShadow: submitting ? 'none' : '0 0 30px rgba(124, 58, 237, 0.3)',
-              fontFamily: 'var(--font-heading)',
-            }}
-          >
-            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-            {submitting ? (
-              <>
-                <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
-                <span>Gerando...</span>
-              </>
-            ) : (
-              <>
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
-                <span>Gerar Design</span>
-              </>
-            )}
-          </button>
+                Gerar Arte
+              </button>
+            </div>
+          </div>
         </div>
       </form>
     </div>
