@@ -308,8 +308,8 @@ export default function NewBrief() {
   // Section completion checks
   const section1Complete = brandSelected
   const section2Complete = !!form.art_type
-  const section3Complete = true // texts are optional
-  const section4Complete = true // description is optional
+  const section3Complete = true // description is optional
+  const section4Complete = true // texts are optional
 
   // Section summaries
   const section1Summary = selectedBrand ? selectedBrand.name : undefined
@@ -317,11 +317,11 @@ export default function NewBrief() {
     ? `${ART_TYPES.find((t) => t.value === form.art_type)?.label ?? form.art_type} · ${FORMAT_PRESETS[selectedPreset]?.label ?? form.format}`
     : undefined
   const section3Summary =
+    form.description ? form.description.slice(0, 60) + (form.description.length > 60 ? '...' : '') : undefined
+  const section4Summary =
     form.headline || form.body_text || form.cta_text
       ? [form.headline, form.cta_text].filter(Boolean).join(' · ') || 'Textos preenchidos'
       : undefined
-  const section4Summary =
-    form.description ? form.description.slice(0, 60) + (form.description.length > 60 ? '...' : '') : undefined
 
   return (
     <div className="p-6 lg:p-8 max-w-[1100px] mx-auto">
@@ -584,111 +584,14 @@ export default function NewBrief() {
               </div>
             </ProgressSection>
 
-            {/* Section 3: Textos */}
+            {/* Section 3: Descrição & Referências */}
             <ProgressSection
               number={3}
-              title="Textos"
+              title="Descrição & Referências"
               summary={section3Summary}
               isOpen={openSection === 3}
               isCompleted={openSection > 3 && section3Complete}
               onToggle={() => setOpenSection(openSection === 3 ? 0 : 3)}
-            >
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
-                    Título
-                  </label>
-                  <input
-                    type="text"
-                    value={form.headline}
-                    onChange={(e) => setField('headline', e.target.value)}
-                    placeholder="Texto principal do título"
-                    className="artisan-input"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
-                    Texto
-                  </label>
-                  <textarea
-                    value={form.body_text}
-                    onChange={(e) => setField('body_text', e.target.value)}
-                    placeholder="Texto de apoio..."
-                    rows={3}
-                    className="artisan-input resize-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
-                    CTA
-                  </label>
-                  <input
-                    type="text"
-                    value={form.cta_text}
-                    onChange={(e) => setField('cta_text', e.target.value)}
-                    placeholder="ex: Compre Agora, Saiba Mais, Cadastre-se"
-                    className="artisan-input"
-                  />
-                </div>
-
-                {/* Suggest texts with AI */}
-                {form.art_type && (
-                  <button
-                    type="button"
-                    onClick={handleSuggestTexts}
-                    disabled={suggesting}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                    style={{
-                      color: 'var(--accent-secondary)',
-                      border: '1px solid rgba(90, 200, 250, 0.3)',
-                      background: 'rgba(90, 200, 250, 0.06)',
-                      fontFamily: 'var(--font-heading)',
-                    }}
-                  >
-                    {suggesting ? (
-                      <>
-                        <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                        </svg>
-                        <span>Gerando sugestões...</span>
-                      </>
-                    ) : (
-                      <>
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                        </svg>
-                        <span>Sugerir Textos com IA</span>
-                      </>
-                    )}
-                  </button>
-                )}
-
-                <button
-                  type="button"
-                  onClick={() => setOpenSection(4)}
-                  className="w-full py-2.5 rounded-lg text-sm font-medium transition-all"
-                  style={{
-                    background: 'rgba(48, 209, 88, 0.08)',
-                    color: 'var(--accent-primary)',
-                    border: '1px solid rgba(48, 209, 88, 0.2)',
-                  }}
-                >
-                  Continuar →
-                </button>
-              </div>
-            </ProgressSection>
-
-            {/* Section 4: Descrição & Referências */}
-            <ProgressSection
-              number={4}
-              title="Descrição & Referências"
-              summary={section4Summary}
-              isOpen={openSection === 4}
-              isCompleted={openSection > 4 && section4Complete}
-              onToggle={() => setOpenSection(openSection === 4 ? 0 : 4)}
             >
               <div className="space-y-4">
                 <div>
@@ -813,6 +716,103 @@ export default function NewBrief() {
                     </div>
                   )}
                 </div>
+
+                <button
+                  type="button"
+                  onClick={() => setOpenSection(4)}
+                  className="w-full py-2.5 rounded-lg text-sm font-medium transition-all"
+                  style={{
+                    background: 'rgba(48, 209, 88, 0.08)',
+                    color: 'var(--accent-primary)',
+                    border: '1px solid rgba(48, 209, 88, 0.2)',
+                  }}
+                >
+                  Continuar →
+                </button>
+              </div>
+            </ProgressSection>
+
+            {/* Section 4: Textos */}
+            <ProgressSection
+              number={4}
+              title="Textos"
+              summary={section4Summary}
+              isOpen={openSection === 4}
+              isCompleted={openSection > 4 && section4Complete}
+              onToggle={() => setOpenSection(openSection === 4 ? 0 : 4)}
+            >
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                    Título
+                  </label>
+                  <input
+                    type="text"
+                    value={form.headline}
+                    onChange={(e) => setField('headline', e.target.value)}
+                    placeholder="Texto principal do título"
+                    className="artisan-input"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                    Texto
+                  </label>
+                  <textarea
+                    value={form.body_text}
+                    onChange={(e) => setField('body_text', e.target.value)}
+                    placeholder="Texto de apoio..."
+                    rows={3}
+                    className="artisan-input resize-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                    CTA
+                  </label>
+                  <input
+                    type="text"
+                    value={form.cta_text}
+                    onChange={(e) => setField('cta_text', e.target.value)}
+                    placeholder="ex: Compre Agora, Saiba Mais, Cadastre-se"
+                    className="artisan-input"
+                  />
+                </div>
+
+                {/* Suggest texts with AI — now has description available from Section 3 */}
+                {form.art_type && (
+                  <button
+                    type="button"
+                    onClick={handleSuggestTexts}
+                    disabled={suggesting}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{
+                      color: 'var(--accent-secondary)',
+                      border: '1px solid rgba(90, 200, 250, 0.3)',
+                      background: 'rgba(90, 200, 250, 0.06)',
+                      fontFamily: 'var(--font-heading)',
+                    }}
+                  >
+                    {suggesting ? (
+                      <>
+                        <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                        </svg>
+                        <span>Gerando sugestões...</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                        </svg>
+                        <span>Sugerir Textos com IA</span>
+                      </>
+                    )}
+                  </button>
+                )}
 
                 <button
                   type="button"
