@@ -1,0 +1,55 @@
+from typing import Optional
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=True,
+        extra="ignore",
+    )
+
+    # OpenRouter
+    OPENROUTER_API_KEY: str
+    OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
+
+    # LLM Models
+    LLM_MODEL: str = "anthropic/claude-sonnet-4"
+    VISION_MODEL: str = "anthropic/claude-sonnet-4"
+
+    # Image Models
+    IMAGE_MODEL_TEXT: str
+    IMAGE_MODEL_PHOTO: str
+    IMAGE_MODEL_FAST: str
+    IMAGE_MODEL_FLEX: str
+    IMAGE_MODEL_FONTS: str
+
+    # Database
+    DATABASE_URL: str
+
+    # Redis
+    REDIS_URL: str = "redis://redis:6379/0"
+
+    # Storage
+    STORAGE_PATH: str = "/app/storage"
+
+    # Pipeline
+    MAX_ITERATIONS: int = 3
+    QUALITY_THRESHOLD: int = 75
+
+    # n8n Webhook (optional)
+    N8N_WEBHOOK_URL: Optional[str] = None
+
+    # App
+    APP_HOST: str = "0.0.0.0"
+    APP_PORT: int = 8000
+    FRONTEND_URL: str = "http://localhost:5173"
+
+
+settings = Settings()
+
+
+def get_settings() -> Settings:
+    return settings

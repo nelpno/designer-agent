@@ -1,0 +1,143 @@
+import base64
+import json
+
+import httpx
+
+from app.config import settings
+
+
+class OpenRouterClient:
+    """Unified client for OpenRouter API — handles both LLM and image generation."""
+
+    def __init__(self):
+        self.api_key = settings.OPENROUTER_API_KEY
+        self.base_url = settings.OPENROUTER_BASE_URL
+        self.http_client = httpx.AsyncClient(
+            base_url=self.base_url,
+            headers={
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json",
+                "HTTP-Referer": "https://designer-agent.local",
+                "X-Title": "Designer Agent"
+            },
+            timeout=120.0
+        )
+
+    async def chat(
+        self,
+        model: str,
+        messages: list[dict],
+        temperature: float = 0.7,
+        max_tokens: int = 4096,
+        response_format: dict | None = None,
+    ) -> str:
+        """Send a chat completion request (for LLM agents)."""
+        payload = {
+            "model": model,
+            "messages": messages,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+        }
+        if response_format:
+            payload["response_format"] = response_format
+
+        response = await self.http_client.post("/chat/completions", json=payload)
+        response.raise_for_status()
+        data = response.json()
+        return data["choices"][0]["message"]["content"]
+
+    async def chat_with_vision(
+        self,
+        model: str,
+        messages: list[dict],
+        image_base64: str | None = None,
+        image_url: str | None = None,
+        temperature: float = 0.3,
+        max_tokens: int = 4096,
+    ) -> str:
+        """Send a chat completion with image input (for Reviewer Agent)."""
+        if image_base64:
+            image_content = {
+                "type": "image_url",
+                "image_url": {"url": f"data:image/png;base64,{image_base64}"},
+            }
+        elif image_url:
+            image_content = {"type": "image_url", "image_url": {"url": image_url}}
+        else:
+            raise ValueError("Must provide image_base64 or image_url")
+
+        # Append image to last user message
+        last_msg = messages[-1]
+        if isinstance(last_msg["content"], str):
+            last_msg["content"] = [
+                {"type": "text", "text": last_msg["content"]},
+                image_content,
+            ]
+
+        payload = {
+            "model": model,
+            "messages": messages,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+        }
+
+        response = await self.http_client.post("/chat/completions", json=payload)
+        response.raise_for_status()
+        data = response.json()
+        return data["choices"][0]["message"]["content"]
+
+    async def generate_image(
+        self,
+        model: str,
+        prompt: str,
+        aspect_ratio: str = "1:1",
+        image_size: str = "1K",
+        additional_params: dict | None = None,
+    ) -> bytes:
+        """Generate an image via OpenRouter's image generation API. Returns raw image bytes."""
+        payload = {
+            "model": model,
+            "messages": [{"role": "user", "content": prompt}],
+            "modalities": ["image"],
+            "image_config": {
+                "aspect_ratio": aspect_ratio,
+                "image_size": image_size,
+            },
+        }
+        if additional_params:
+            payload["image_config"].update(additional_params)
+
+        response = await self.http_client.post("/chat/completions", json=payload)
+        response.raise_for_status()
+        data = response.json()
+
+        # Extract base64 image from response
+        content = data["choices"][0]["message"]["content"]
+
+        # OpenRouter returns images as base64 data URLs in the content
+        # Format: data:image/png;base64,<base64_data>
+        # or as items in an "images" field
+        if isinstance(content, list):
+            for item in content:
+                if isinstance(item, dict) and item.get("type") == "image_url":
+                    b64_url = item["image_url"]["url"]
+                    b64_data = b64_url.split(",", 1)[1]
+                    return base64.b64decode(b64_data)
+        elif isinstance(content, str) and content.startswith("data:image"):
+            b64_data = content.split(",", 1)[1]
+            return base64.b64decode(b64_data)
+
+        # Try images field
+        message = data["choices"][0]["message"]
+        if "images" in message:
+            b64_url = message["images"][0]
+            if b64_url.startswith("data:"):
+                b64_data = b64_url.split(",", 1)[1]
+            else:
+                b64_data = b64_url
+            return base64.b64decode(b64_data)
+
+        raise ValueError(f"Could not extract image from response: {json.dumps(data)[:500]}")
+
+    async def close(self):
+        await self.http_client.aclose()
