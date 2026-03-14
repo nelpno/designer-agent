@@ -1,29 +1,32 @@
 // Enums
 
-export enum ArtType {
-  SOCIAL_MEDIA = 'social_media',
-  BANNER = 'banner',
-  POSTER = 'poster',
-  STORY = 'story',
-  EMAIL = 'email',
-  THUMBNAIL = 'thumbnail',
-}
+export type ArtType =
+  | 'ad_creative'
+  | 'social_post'
+  | 'logo'
+  | 'product_shot'
+  | 'lifestyle_photo'
+  | 'mockup'
+  | 'illustration'
+  | 'presentation_slide'
+  | 'brand_material'
 
-export enum Platform {
-  INSTAGRAM = 'instagram',
-  FACEBOOK = 'facebook',
-  TWITTER = 'twitter',
-  LINKEDIN = 'linkedin',
-  YOUTUBE = 'youtube',
-  TIKTOK = 'tiktok',
-  GENERIC = 'generic',
-}
+export type Platform =
+  | 'meta'
+  | 'google'
+  | 'instagram'
+  | 'linkedin'
+  | 'general'
 
-export enum GenerationStatus {
-  PENDING = 'pending',
-  PROCESSING = 'processing',
-  COMPLETED = 'completed',
-  FAILED = 'failed',
+export type GenerationStatus = 'pending' | 'processing' | 'running' | 'completed' | 'failed'
+
+// Namespace shim so existing code using GenerationStatus.PENDING etc. still compiles
+export const GenerationStatus = {
+  PENDING: 'pending' as GenerationStatus,
+  PROCESSING: 'processing' as GenerationStatus,
+  RUNNING: 'running' as GenerationStatus,
+  COMPLETED: 'completed' as GenerationStatus,
+  FAILED: 'failed' as GenerationStatus,
 }
 
 // Models

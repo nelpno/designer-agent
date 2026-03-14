@@ -10,6 +10,6 @@ export const apiClient = axios.create({
 })
 
 export function createWebSocket(path: string): WebSocket {
-  const wsBase = BASE_URL.replace(/^http/, 'ws')
+  const wsBase = BASE_URL.replace(/^http(s?)/, 'ws$1').replace(/\/+$/, '')
   return new WebSocket(`${wsBase}${path}`)
 }

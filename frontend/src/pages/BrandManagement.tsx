@@ -207,6 +207,7 @@ function BrandModal({
   }
 
   // Handle file upload for logo preview
+  // BUG 6 fix: also store dataUrl in form.logo_url so it is sent to the API
   function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
@@ -214,7 +215,7 @@ function BrandModal({
     reader.onload = (ev) => {
       const dataUrl = ev.target?.result as string
       setLogoPreview(dataUrl)
-      // TODO: actual upload to server
+      setForm(prev => ({ ...prev, logo_url: dataUrl }))
     }
     reader.readAsDataURL(file)
   }
@@ -250,8 +251,10 @@ function BrandModal({
     }
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
+  // BUG 10 fix: extract save logic into its own function so it can be called
+  // from both the form onSubmit handler and the footer button onClick without
+  // needing to fabricate a synthetic Event.
+  async function saveForm() {
     if (!form.name.trim()) {
       setError('O nome da marca é obrigatório')
       return
@@ -274,6 +277,11 @@ function BrandModal({
     } finally {
       setSaving(false)
     }
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    saveForm()
   }
 
   return (
@@ -360,7 +368,7 @@ function BrandModal({
               {logoPreview && (
                 <div className="mt-2 flex items-center gap-3">
                   <img src={logoPreview} alt="Preview" className="w-12 h-12 rounded-lg object-contain bg-white/[0.03] border border-white/[0.06]" />
-                  <span className="text-xs text-slate-500">Preview (upload ainda não implementado)</span>
+                  <span className="text-xs text-slate-500">Preview</span>
                 </div>
               )}
             </div>
@@ -556,7 +564,7 @@ function BrandModal({
             Cancelar
           </button>
           <button
-            onClick={handleSubmit as unknown as React.MouseEventHandler}
+            onClick={saveForm}
             disabled={saving}
             className="flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-semibold text-white transition-all disabled:opacity-50 relative overflow-hidden group"
             style={{

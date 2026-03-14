@@ -23,7 +23,7 @@ class Brand(Base):
     tone_of_voice: Mapped[str | None] = mapped_column(TEXT, nullable=True)
     do_rules: Mapped[list[str] | None] = mapped_column(ARRAY(TEXT), nullable=True)
     dont_rules: Mapped[list[str] | None] = mapped_column(ARRAY(TEXT), nullable=True)
-    reference_images: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    reference_images: Mapped[list | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

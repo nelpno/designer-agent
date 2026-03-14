@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { apiClient } from '../api/client'
-import { Generation, GenerationStatus } from '../types'
+import { Brand, Generation, GenerationStatus } from '../types'
 import StatusBadge from '../components/StatusBadge'
 import ScoreBadge from '../components/ScoreBadge'
 import ModelBadge from '../components/ModelBadge'
@@ -161,6 +161,8 @@ function GenerationCard({
 export default function Dashboard() {
   const [generations, setGenerations] = useState<Generation[]>([])
   const [stats, setStats] = useState<GalleryStats | null>(null)
+  // BUG 9 fix: track actual brands count instead of deriving from briefs
+  const [brandsCount, setBrandsCount] = useState<number>(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -168,12 +170,14 @@ export default function Dashboard() {
     async function fetchData() {
       try {
         setLoading(true)
-        const [genRes, statsRes] = await Promise.all([
+        const [genRes, statsRes, brandsRes] = await Promise.all([
           apiClient.get<Generation[]>('/api/generations?limit=12'),
           apiClient.get<GalleryStats>('/api/gallery/stats'),
+          apiClient.get<Brand[]>('/api/brands'),
         ])
         setGenerations(genRes.data)
         setStats(statsRes.data)
+        setBrandsCount(brandsRes.data.length)
       } catch (err) {
         setError('Falha ao carregar dados do painel')
         console.error(err)
@@ -183,10 +187,6 @@ export default function Dashboard() {
     }
     fetchData()
   }, [])
-
-  const activeBrands = new Set(
-    generations.map((g) => g.brief_id).filter(Boolean)
-  ).size
 
   const modelsUsed =
     stats?.models_used?.length ??
@@ -278,7 +278,7 @@ export default function Dashboard() {
         />
         <StatCard
           label="Marcas Ativas"
-          value={activeBrands}
+          value={brandsCount}
           loading={loading}
           gradient="linear-gradient(135deg, #f59e0b, #fbbf24)"
           delay={180}

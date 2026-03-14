@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import shutil
 from datetime import datetime
 from pathlib import Path
@@ -31,10 +32,10 @@ async def save_image(
 ) -> str:
     """Save raw image bytes and return the relative URL path."""
     gen_dir = _build_generation_dir(generation_id, brand_id)
-    gen_dir.mkdir(parents=True, exist_ok=True)
+    await asyncio.to_thread(gen_dir.mkdir, parents=True, exist_ok=True)
 
     file_path = gen_dir / filename
-    file_path.write_bytes(image_data)
+    await asyncio.to_thread(file_path.write_bytes, image_data)
 
     # Return relative path from STORAGE_PATH root
     return str(file_path.relative_to(get_storage_path())).replace("\\", "/")
@@ -46,11 +47,11 @@ async def save_thumbnail(
     brand_id: str | None = None,
 ) -> str:
     """Create a 400px-wide WebP thumbnail and return the relative URL path."""
-    try:
+    def _create_thumbnail(data: bytes, thumb_path: Path) -> None:
         from PIL import Image
         import io
 
-        img = Image.open(io.BytesIO(image_data))
+        img = Image.open(io.BytesIO(data))
 
         # Resize preserving aspect ratio: max width 400px
         max_size = 400
@@ -62,16 +63,18 @@ async def save_thumbnail(
 
         thumb_buffer = io.BytesIO()
         img.save(thumb_buffer, format="WEBP", quality=80)
-        thumb_data = thumb_buffer.getvalue()
-    except ImportError:
-        # Pillow not available — store original bytes under thumbnail name
-        thumb_data = image_data
+        thumb_path.write_bytes(thumb_buffer.getvalue())
 
     gen_dir = _build_generation_dir(generation_id, brand_id)
-    gen_dir.mkdir(parents=True, exist_ok=True)
+    await asyncio.to_thread(gen_dir.mkdir, parents=True, exist_ok=True)
 
     thumb_path = gen_dir / "thumbnail.webp"
-    thumb_path.write_bytes(thumb_data)
+
+    try:
+        await asyncio.to_thread(_create_thumbnail, image_data, thumb_path)
+    except Exception:
+        # Pillow not available or PIL error — store original bytes under thumbnail name
+        await asyncio.to_thread(thumb_path.write_bytes, image_data)
 
     return str(thumb_path.relative_to(get_storage_path())).replace("\\", "/")
 

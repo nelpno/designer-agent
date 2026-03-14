@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { apiClient, createWebSocket } from '../api/client'
 import { Generation, GeneratedImage, GenerationStatus, PipelineLog } from '../types'
@@ -162,7 +162,8 @@ export default function GenerationDetail() {
   const [selectedImage, setSelectedImage] = useState(0)
   const wsRef = useRef<WebSocket | null>(null)
 
-  async function fetchGeneration() {
+  // BUG 4 fix: wrap in useCallback to avoid stale closure
+  const fetchGeneration = useCallback(async () => {
     if (!id) return
     try {
       const [genRes, imagesRes, logsRes] = await Promise.all([
@@ -179,7 +180,7 @@ export default function GenerationDetail() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [id])
 
   useEffect(() => {
     if (!id) return
@@ -189,7 +190,11 @@ export default function GenerationDetail() {
     const ws = createWebSocket(`/ws/generation/${id}`)
     wsRef.current = ws
 
+    // BUG 2 fix: mounted flag to prevent setState after unmount
+    let mounted = true
+
     ws.onmessage = (event) => {
+      if (!mounted) return
       try {
         const data = JSON.parse(event.data)
         if (data.generation) {
@@ -202,23 +207,42 @@ export default function GenerationDetail() {
       }
     }
 
-    ws.onerror = () => {}
+    // BUG 1 fix: handle WebSocket errors
+    ws.onerror = () => {
+      console.error('WebSocket error')
+    }
 
-    return () => { ws.close() }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id])
+    // BUG 2 fix: clear wsRef on close
+    ws.onclose = () => { wsRef.current = null }
+
+    return () => {
+      mounted = false
+      ws.close()
+    }
+  }, [id, fetchGeneration])
 
   useEffect(() => {
     if (!generation) return
     const isActive =
       generation.status === GenerationStatus.PENDING ||
-      generation.status === GenerationStatus.PROCESSING
+      generation.status === GenerationStatus.PROCESSING ||
+      generation.status === GenerationStatus.RUNNING
 
     if (!isActive) return
-    const interval = setInterval(fetchGeneration, 3000)
+
+    // BUG 3 fix: only poll if WebSocket is not connected
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) return
+
+    const interval = setInterval(fetchGeneration, 5000)
     return () => clearInterval(interval)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [generation?.status])
+  }, [generation?.status, fetchGeneration])
+
+  // BUG 8 fix: reset selectedImage to 0 when images list changes
+  useEffect(() => {
+    if (selectedImage >= images.length && images.length > 0) {
+      setSelectedImage(0)
+    }
+  }, [images.length, selectedImage])
 
   async function handleRetry() {
     if (!id) return

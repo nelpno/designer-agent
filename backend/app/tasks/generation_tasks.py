@@ -1,4 +1,5 @@
 import asyncio
+import uuid as _uuid
 
 from app.tasks.celery_app import celery_app
 from app.agents.orchestrator import run_pipeline
@@ -34,7 +35,7 @@ async def _run_pipeline_async(generation_id: str, context_dict: dict, task):
         # Update generation status to running
         async with AsyncSessionLocal() as session:
             result = await session.execute(
-                select(Generation).where(Generation.id == generation_id)
+                select(Generation).where(Generation.id == _uuid.UUID(generation_id))
             )
             generation = result.scalar_one_or_none()
             if generation:
@@ -48,7 +49,7 @@ async def _run_pipeline_async(generation_id: str, context_dict: dict, task):
         # Update generation with results
         async with AsyncSessionLocal() as session:
             result = await session.execute(
-                select(Generation).where(Generation.id == generation_id)
+                select(Generation).where(Generation.id == _uuid.UUID(generation_id))
             )
             generation = result.scalar_one_or_none()
             if generation:
@@ -72,7 +73,7 @@ async def _run_pipeline_async(generation_id: str, context_dict: dict, task):
         # Update generation as failed
         async with AsyncSessionLocal() as session:
             result = await session.execute(
-                select(Generation).where(Generation.id == generation_id)
+                select(Generation).where(Generation.id == _uuid.UUID(generation_id))
             )
             generation = result.scalar_one_or_none()
             if generation:
