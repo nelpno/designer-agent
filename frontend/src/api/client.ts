@@ -2,7 +2,9 @@ import axios from 'axios'
 import type { Generation } from '../types'
 import type { ArtTypeConfig } from '../config/artTypeConfig'
 
-const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
+// Use same origin when behind reverse proxy (Traefik routes /api to backend)
+// Fallback to explicit URL for local dev
+const BASE_URL = import.meta.env.VITE_API_URL || window.location.origin
 
 export const apiClient = axios.create({
   baseURL: BASE_URL,

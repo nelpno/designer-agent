@@ -21,7 +21,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 app = FastAPI(
     title="Designer Agent API",
     description="API de Geração de Artes Estáticas com IA",
-    version="1.1.0",
+    version="1.4.0",
     lifespan=lifespan,
     docs_url="/docs" if settings.DEBUG else None,
     redoc_url="/redoc" if settings.DEBUG else None,
@@ -63,9 +63,16 @@ async def require_api_key(request: Request, call_next):
 
 
 # 3. CORS — restrict to known frontend origin
-allowed_origins = [settings.FRONTEND_URL]
-if settings.DEBUG:
+if settings.FRONTEND_URL == "*" or settings.DEBUG:
     allowed_origins = ["*"]
+else:
+    # Accept both HTTP and HTTPS variants of the configured origin
+    base = settings.FRONTEND_URL.rstrip("/")
+    allowed_origins = [base]
+    if base.startswith("https://"):
+        allowed_origins.append(base.replace("https://", "http://", 1))
+    elif base.startswith("http://"):
+        allowed_origins.append(base.replace("http://", "https://", 1))
 
 app.add_middleware(
     CORSMiddleware,
