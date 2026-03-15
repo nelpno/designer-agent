@@ -127,6 +127,8 @@ class ReviewerAgent(BaseAgent):
             text_accuracy_score=text_accuracy_score,
             brand_alignment_score=brand_alignment_score,
             technical_score=technical_score,
+            visual_integrity_score=visual_integrity_score,
+            hard_reject=hard_reject,
             issues=review_data.get("issues", []),
             approved=approved,
             summary=review_data.get("summary", ""),
