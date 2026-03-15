@@ -221,7 +221,7 @@ export default function Layout({ children }: LayoutProps) {
             className="text-xs text-center"
             style={{ color: 'var(--text-tertiary)', fontFamily: 'var(--font-body)' }}
           >
-            v1.1
+            v1.4
           </p>
         </div>
       </aside>
