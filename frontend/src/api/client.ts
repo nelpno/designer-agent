@@ -26,8 +26,10 @@ export function createWebSocket(path: string): WebSocket {
 export function storageUrl(path: string | null | undefined): string {
   if (!path) return ''
   if (path.startsWith('http') || path.startsWith('data:')) return path
-  if (path.startsWith('/storage/')) return `${BASE_URL}${path}`
-  return `${BASE_URL}/storage/${path}`
+  // Normalize: strip leading slash to avoid double slashes
+  const clean = path.startsWith('/') ? path : `/${path}`
+  if (clean.startsWith('/storage/')) return `${BASE_URL}${clean}`
+  return `${BASE_URL}/storage${clean}`
 }
 
 /**

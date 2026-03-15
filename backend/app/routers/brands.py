@@ -10,7 +10,7 @@ from app.database import get_session
 from app.schemas.brand import BrandCreate, BrandResponse, BrandUpdate
 from app.services import brand_service
 
-router = APIRouter(prefix="/api/brands", tags=["brands"])
+router = APIRouter(prefix="/api/brands", tags=["brands"], redirect_slashes=False)
 
 
 @router.post("", response_model=BrandResponse, status_code=status.HTTP_201_CREATED)

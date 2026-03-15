@@ -37,10 +37,10 @@ async def _save_agent_log(
                 iteration=iteration,
                 decision=decision,
                 reasoning=reasoning,
-            duration_ms=duration_ms,
-        )
-        session.add(log)
-        await session.commit()
+                duration_ms=duration_ms,
+            )
+            session.add(log)
+            await session.commit()
     except Exception as e:
         logger.warning(f"Failed to persist pipeline log for {agent_name}: {e}")
 

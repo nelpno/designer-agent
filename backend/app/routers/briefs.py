@@ -10,7 +10,7 @@ from app.database import get_session
 from app.schemas.brief import BriefCreate, BriefResponse, BriefUpdate
 from app.services import brief_service
 
-router = APIRouter(prefix="/api/briefs", tags=["briefs"])
+router = APIRouter(prefix="/api/briefs", tags=["briefs"], redirect_slashes=False)
 
 
 @router.post("", response_model=BriefResponse, status_code=status.HTTP_201_CREATED)

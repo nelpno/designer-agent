@@ -6,7 +6,7 @@ from fastapi import APIRouter
 
 from app.config.art_type_config import get_all_configs
 
-router = APIRouter(prefix="/api/config", tags=["config"])
+router = APIRouter(prefix="/api/config", tags=["config"], redirect_slashes=False)
 
 
 @router.get("/art-types")

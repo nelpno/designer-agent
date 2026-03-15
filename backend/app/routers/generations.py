@@ -450,9 +450,13 @@ async def download_generation_image(
     if not os.path.isfile(file_path):
         raise HTTPException(status_code=404, detail="File not found on disk")
 
-    filename = f"design-{str(generation_id)[:8]}.png"
+    # Detect actual file type from extension
+    ext = os.path.splitext(file_path)[1].lower()
+    media_types = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp", ".gif": "image/gif"}
+    media_type = media_types.get(ext, "image/png")
+    filename = f"design-{str(generation_id)[:8]}{ext or '.png'}"
     return FileResponse(
         path=file_path,
         filename=filename,
-        media_type="image/png",
+        media_type=media_type,
     )

@@ -384,7 +384,8 @@ export default function GenerationDetail() {
             {generation.status === GenerationStatus.COMPLETED && (
               <button
                 onClick={() => {
-                  window.location.href = `${import.meta.env.VITE_API_URL ?? 'http://localhost:8000'}/api/generations/${id}/download`
+                  const base = import.meta.env.VITE_API_URL || window.location.origin
+                  window.location.href = `${base}/api/generations/${id}/download`
                 }}
                 className="btn-secondary flex items-center gap-2 text-sm"
               >
@@ -515,11 +516,13 @@ export default function GenerationDetail() {
                       opacity: selectedImage === idx ? 1 : 0.7,
                     }}
                   >
-                    <img
-                      src={img.thumbnail_url ?? img.image_url}
-                      alt={`Iteração ${idx + 1}`}
-                      className="w-full h-full object-cover"
-                    />
+                    {(img.thumbnail_url || img.image_url) && (
+                      <img
+                        src={img.thumbnail_url ?? img.image_url}
+                        alt={`Iteração ${idx + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                    )}
                   </button>
                 ))}
               </div>
