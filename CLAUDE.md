@@ -1,6 +1,6 @@
 # Artisan
 
-## Status: Em produção (v1.4) — 46 commits
+## Status: Em produção (v1.4) — 48 commits
 
 ## URLs
 - **Frontend**: http://82.29.60.220:8086 (direto)
@@ -68,6 +68,8 @@ Plataforma interna de geração de artes estáticas com IA chamada **Artisan**. 
 - **Pipeline Visual**: nomes dos agentes (Creative Director, etc.), duração human-readable, raciocínio expansível
 - **Mobile Otimizado**: stats 2 colunas, art types 2 colunas, padding responsivo, stack vertical
 - **Gallery com Batch**: gerações agrupadas por batch_id, carrossel com scroll horizontal
+- **Batch Viewer**: setas ← → para navegar entre imagens do batch, indicador de posição, badges clicáveis
+- **Referências com Peso no Layout**: Prompt Engineer dá mais peso à composição/layout das referências visuais
 - **Config API**: `GET /api/config/art-types` expõe config para API futura do planejador
 
 ## Design System — Artisan
