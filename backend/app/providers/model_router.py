@@ -17,6 +17,9 @@ MODEL_ROUTING = {
     "social_post": {"primary": "IMAGE_MODEL_FAST", "fallback": "IMAGE_MODEL_FLEX"},
     "illustration": {"primary": "IMAGE_MODEL_TEXT", "fallback": "IMAGE_MODEL_FLEX"},
     "brand_material": {"primary": "IMAGE_MODEL_TEXT", "fallback": "IMAGE_MODEL_PHOTO"},
+
+    # Carousel → text-capable model (slides typically have text)
+    "carousel": {"primary": "IMAGE_MODEL_TEXT", "fallback": "IMAGE_MODEL_FAST"},
 }
 
 # Format presets (width x height → aspect ratio)
@@ -52,10 +55,25 @@ def get_fallback_model(art_type: str) -> str:
     return getattr(settings, model_attr)
 
 
+# Aspect ratio label → default config (used when format is a ratio like "1:1", "9:16")
+ASPECT_RATIO_DEFAULTS = {
+    "1:1": {"aspect_ratio": "1:1", "image_size": "1K"},
+    "9:16": {"aspect_ratio": "9:16", "image_size": "1K"},
+    "16:9": {"aspect_ratio": "16:9", "image_size": "1K"},
+    "4:5": {"aspect_ratio": "4:5", "image_size": "1K"},
+    "4:3": {"aspect_ratio": "4:3", "image_size": "1K"},
+    "3:4": {"aspect_ratio": "3:4", "image_size": "1K"},
+}
+
+
 def get_format_config(format_str: str, custom_width: int | None = None, custom_height: int | None = None) -> dict:
     """Get aspect ratio and image size from format string or custom dimensions."""
     if format_str in FORMAT_PRESETS:
         return FORMAT_PRESETS[format_str]
+
+    # Support aspect ratio labels directly (e.g. "1:1", "9:16")
+    if format_str in ASPECT_RATIO_DEFAULTS:
+        return ASPECT_RATIO_DEFAULTS[format_str]
 
     if custom_width and custom_height:
         # Determine closest aspect ratio

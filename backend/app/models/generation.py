@@ -20,6 +20,10 @@ class Generation(Base):
         ForeignKey("briefs.id", ondelete="SET NULL"),
         nullable=True,
     )
+    batch_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), nullable=True, index=True
+    )
+    format_label: Mapped[str | None] = mapped_column(VARCHAR(20), nullable=True)
     pipeline_context: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     final_image_url: Mapped[str | None] = mapped_column(TEXT, nullable=True)
     final_score: Mapped[int | None] = mapped_column(Integer, nullable=True)

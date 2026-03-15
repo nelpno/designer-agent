@@ -1,0 +1,133 @@
+import type { Generation } from '../types'
+import StatusBadge from './StatusBadge'
+
+interface BatchProgressProps {
+  batchId: string
+  generations: Generation[]
+}
+
+function formatStatusLabel(gen: Generation): string {
+  switch (gen.status) {
+    case 'completed':
+      return 'Concluído'
+    case 'processing':
+    case 'running':
+      return 'Em progresso'
+    case 'pending':
+      return 'Pendente'
+    case 'failed':
+      return 'Falhou'
+    default:
+      return gen.status
+  }
+}
+
+function statusIcon(status: string) {
+  switch (status) {
+    case 'completed':
+      return (
+        <svg className="w-3.5 h-3.5" style={{ color: 'var(--color-success)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+        </svg>
+      )
+    case 'processing':
+    case 'running':
+      return (
+        <svg className="w-3.5 h-3.5 animate-spin" style={{ color: 'var(--color-info)' }} fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+        </svg>
+      )
+    case 'failed':
+      return (
+        <svg className="w-3.5 h-3.5" style={{ color: 'var(--color-error)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      )
+    default:
+      return (
+        <div
+          className="w-2.5 h-2.5 rounded-full"
+          style={{ background: 'var(--text-tertiary)' }}
+        />
+      )
+  }
+}
+
+export default function BatchProgress({ batchId, generations }: BatchProgressProps) {
+  const total = generations.length
+  const completed = generations.filter((g) => g.status === 'completed').length
+  const failed = generations.filter((g) => g.status === 'failed').length
+  const progressPercent = total > 0 ? (completed / total) * 100 : 0
+
+  return (
+    <div className="artisan-card-static p-5 rounded-2xl space-y-4">
+      <div className="flex items-center gap-2">
+        <div
+          className="w-1.5 h-5 rounded-full"
+          style={{ background: 'var(--accent-secondary)' }}
+        />
+        <h3
+          className="font-semibold text-sm"
+          style={{ fontFamily: 'var(--font-heading)', color: 'var(--text-primary)' }}
+        >
+          Progresso do Lote
+        </h3>
+      </div>
+
+      {/* Overall progress */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+            {completed}/{total} imagens geradas
+          </span>
+          {failed > 0 && (
+            <span className="text-xs" style={{ color: 'var(--color-error)' }}>
+              {failed} com falha
+            </span>
+          )}
+        </div>
+
+        {/* Progress bar */}
+        <div
+          className="w-full h-2 rounded-full overflow-hidden"
+          style={{ background: 'var(--bg-tertiary)' }}
+        >
+          <div
+            className="h-full rounded-full transition-all duration-500 ease-out"
+            style={{
+              width: `${progressPercent}%`,
+              background: failed > 0 && completed + failed === total
+                ? 'linear-gradient(90deg, var(--color-success), var(--color-error))'
+                : 'var(--accent-gradient)',
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Per-format status */}
+      <div className="space-y-2">
+        {generations.map((gen) => (
+          <div
+            key={gen.id}
+            className="flex items-center justify-between py-1.5 px-2 rounded-lg"
+            style={{ background: 'var(--bg-tertiary)' }}
+          >
+            <div className="flex items-center gap-2">
+              {statusIcon(gen.status)}
+              <span className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>
+                {gen.format_label || 'Imagem'}
+              </span>
+            </div>
+            <StatusBadge status={gen.status} />
+          </div>
+        ))}
+      </div>
+
+      {/* Batch ID */}
+      <p className="text-[10px] font-mono" style={{ color: 'var(--text-tertiary)' }}>
+        Lote: {batchId.slice(0, 8)}...
+      </p>
+    </div>
+  )
+}

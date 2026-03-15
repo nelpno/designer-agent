@@ -66,6 +66,40 @@ def _load_reference_images(context: PipelineContext) -> list[str]:
     return images_b64
 
 
+def _load_inclusion_images(context: PipelineContext) -> list[str]:
+    """Load inclusion images as base64 strings.
+
+    Inclusion images are assets that MUST appear in the generated image
+    (e.g., product photos, person photos), unlike reference images which
+    are just style inspiration.
+    """
+    settings = get_settings()
+    images_b64 = []
+
+    storage_root = os.path.realpath(settings.STORAGE_PATH)
+
+    for inc_url in (context.brief.inclusion_urls or []):
+        try:
+            clean_path = inc_url.lstrip("/")
+            if clean_path.startswith("storage/"):
+                clean_path = clean_path[len("storage/"):]
+            file_path = os.path.realpath(os.path.join(storage_root, clean_path))
+            if not file_path.startswith(storage_root):
+                logger.warning(f"Path traversal blocked for inclusion: {inc_url}")
+                continue
+            if os.path.isfile(file_path):
+                with open(file_path, "rb") as f:
+                    img_bytes = f.read()
+                images_b64.append(base64.b64encode(img_bytes).decode())
+                logger.info(f"Loaded inclusion image: {file_path}")
+            else:
+                logger.warning(f"Inclusion image not found: {file_path}")
+        except Exception as e:
+            logger.warning(f"Failed to load inclusion image {inc_url}: {e}")
+
+    return images_b64
+
+
 class GeneratorAgent(BaseAgent):
     name = "generator"
 
@@ -83,6 +117,18 @@ class GeneratorAgent(BaseAgent):
                 reasoning="Sending reference images to the model for visual context",
             )
 
+        # Load inclusion images (assets that MUST appear in the generated image)
+        inclusion_images = _load_inclusion_images(context)
+        if inclusion_images:
+            context.log_decision(
+                agent_name=self.name,
+                decision=f"Loaded {len(inclusion_images)} inclusion image(s)",
+                reasoning="Sending inclusion images — these must appear prominently in the generated image",
+            )
+
+        # Combine all images for the model (reference + inclusion)
+        all_images = reference_images + inclusion_images
+
         # Try primary model
         try:
             image_bytes = await self.client.generate_image(
@@ -91,7 +137,7 @@ class GeneratorAgent(BaseAgent):
                 aspect_ratio=prompt.aspect_ratio,
                 image_size=prompt.image_size,
                 additional_params=prompt.additional_params if prompt.additional_params else None,
-                reference_images=reference_images or None,
+                reference_images=all_images or None,
             )
         except Exception as e:
             logger.warning(f"Primary model {prompt.selected_model} failed: {e}. Trying fallback.")
@@ -110,7 +156,7 @@ class GeneratorAgent(BaseAgent):
                 prompt=prompt.main_prompt,
                 aspect_ratio=prompt.aspect_ratio,
                 image_size=prompt.image_size,
-                reference_images=reference_images or None,
+                reference_images=all_images or None,
             )
             prompt.selected_model = fallback_model  # Update for tracking
 

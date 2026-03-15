@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { apiClient, createWebSocket, storageUrl } from '../api/client'
+import { apiClient, createWebSocket, storageUrl, fetchBatch } from '../api/client'
 import { Generation, GeneratedImage, GenerationStatus, PipelineLog } from '../types'
 import StatusBadge from '../components/StatusBadge'
 import ModelBadge from '../components/ModelBadge'
+import BatchProgress from '../components/BatchProgress'
 
 function formatAgentName(name?: string): string {
   if (!name) return ''
@@ -203,6 +204,7 @@ export default function GenerationDetail() {
   const [error, setError] = useState<string | null>(null)
   const [retrying, setRetrying] = useState(false)
   const [selectedImage, setSelectedImage] = useState(0)
+  const [batchGenerations, setBatchGenerations] = useState<Generation[]>([])
   const wsRef = useRef<WebSocket | null>(null)
   const wsConnectedRef = useRef(false)
 
@@ -285,6 +287,17 @@ export default function GenerationDetail() {
       setSelectedImage(0)
     }
   }, [images.length, selectedImage])
+
+  // Fetch batch siblings if this generation belongs to a batch
+  useEffect(() => {
+    if (!generation?.batch_id) {
+      setBatchGenerations([])
+      return
+    }
+    fetchBatch(generation.batch_id)
+      .then(setBatchGenerations)
+      .catch(() => setBatchGenerations([]))
+  }, [generation?.batch_id])
 
   async function handleRetry() {
     if (!id) return
@@ -541,6 +554,23 @@ export default function GenerationDetail() {
                   <dt className="text-sm" style={{ color: 'var(--text-secondary)' }}>Status</dt>
                   <dd><StatusBadge status={generation.status} /></dd>
                 </div>
+                {generation.format_label && (
+                  <div className="flex items-center justify-between">
+                    <dt className="text-sm" style={{ color: 'var(--text-secondary)' }}>Formato</dt>
+                    <dd>
+                      <span
+                        className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold"
+                        style={{
+                          background: 'rgba(90, 200, 250, 0.12)',
+                          color: '#5AC8FA',
+                          border: '1px solid rgba(90, 200, 250, 0.2)',
+                        }}
+                      >
+                        {generation.format_label}
+                      </span>
+                    </dd>
+                  </div>
+                )}
                 {generation.model_used && (
                   <div className="flex items-center justify-between">
                     <dt className="text-sm" style={{ color: 'var(--text-secondary)' }}>Modelo</dt>
@@ -606,6 +636,14 @@ export default function GenerationDetail() {
                 )}
               </dl>
             </div>
+
+            {/* Batch progress */}
+            {generation.batch_id && batchGenerations.length > 1 && (
+              <BatchProgress
+                batchId={generation.batch_id}
+                generations={batchGenerations}
+              />
+            )}
 
             {/* Error message */}
             {generation.error_message && (

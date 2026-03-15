@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
@@ -18,6 +19,8 @@ class BriefCreate(BaseModel):
     cta_text: str | None = None
     description: str | None = None
     reference_urls: list[str] | None = None
+    slides: list[dict[str, Any]] | None = None
+    inclusion_urls: list[str] | None = None
     created_by: str | None = None
 
 
@@ -33,6 +36,8 @@ class BriefUpdate(BaseModel):
     cta_text: str | None = None
     description: str | None = None
     reference_urls: list[str] | None = None
+    slides: list[dict[str, Any]] | None = None
+    inclusion_urls: list[str] | None = None
     created_by: str | None = None
     status: str | None = None
 
@@ -52,6 +57,8 @@ class BriefResponse(BaseModel):
     cta_text: str | None
     description: str | None
     reference_urls: list[str] | None
+    slides: list[dict[str, Any]] | None = None
+    inclusion_urls: list[str] | None = None
     status: str
     created_by: str | None
     created_at: datetime

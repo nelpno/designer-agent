@@ -208,6 +208,46 @@ Guidelines:
                 parts.append("- The brand logo will be sent as a reference image")
                 parts.append("- Your prompt should instruct the model to incorporate the logo naturally in the design")
 
+        # Inclusion images — assets that MUST appear in the generated image
+        has_inclusions = bool(brief.inclusion_urls)
+        if has_inclusions:
+            parts.append(f"\n## Inclusion Images — MUST APPEAR ({len(brief.inclusion_urls)} image(s))")
+            parts.append("- The following person/product images MUST appear prominently in the generated image")
+            parts.append("- These are NOT just style references — the actual content of these images must be visible in the final design")
+            parts.append("- Your prompt MUST instruct the model to incorporate these subjects faithfully and prominently")
+
+        # Carousel / slides context
+        if context.current_slide_index is not None and brief.slides:
+            # Per-slide generation mode: only use this slide's text
+            slide_idx = context.current_slide_index
+            slide_num = slide_idx + 1
+            total = context.total_slides or len(brief.slides)
+            slide = brief.slides[slide_idx] if slide_idx < len(brief.slides) else {}
+            slide_headline = slide.get("headline", "")
+            slide_body = slide.get("body_text", "")
+
+            parts.append(f"\n## Carousel Slide {slide_num} of {total}")
+            parts.append(f"- This is slide {slide_num} of {total} in a carousel post")
+            parts.append("- Maintain visual coherence with other slides: SAME background treatment, layout grid, color palette, and typography style")
+            parts.append("- Each slide should feel like part of a unified set while having its own unique content")
+            if slide_headline:
+                parts.append(f'- Headline (MUST appear in image exactly as): "{slide_headline}"')
+            if slide_body:
+                parts.append(f'- Body Text (MUST appear in image exactly as): "{slide_body}"')
+        elif brief.slides:
+            # Legacy mode: all slides in one generation
+            parts.append(f"\n## Carousel — {len(brief.slides)} Slides")
+            parts.append("- This is a carousel post. Each slide must share the SAME visual style, color palette, and typography")
+            parts.append("- Maintain visual coherence: consistent background treatment, layout grid, and accent colors across all slides")
+            for i, slide in enumerate(brief.slides, 1):
+                slide_headline = slide.get("headline", "")
+                slide_body = slide.get("body_text", "")
+                parts.append(f"- Slide {i}:")
+                if slide_headline:
+                    parts.append(f'  - Headline: "{slide_headline}"')
+                if slide_body:
+                    parts.append(f'  - Body: "{slide_body}"')
+
         parts.append(f"\nProduce the best possible prompt for {selected_model}, following the format rules in your system instructions.")
 
         return "\n".join(parts)

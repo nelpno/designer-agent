@@ -3,6 +3,7 @@
 export type ArtType =
   | 'ad_creative'
   | 'social_post'
+  | 'carousel'
   | 'logo'
   | 'product_shot'
   | 'lifestyle_photo'
@@ -27,6 +28,19 @@ export const GenerationStatus = {
   RUNNING: 'running' as GenerationStatus,
   COMPLETED: 'completed' as GenerationStatus,
   FAILED: 'failed' as GenerationStatus,
+}
+
+// Carousel / Multi-format types
+
+export interface SlideData {
+  headline: string
+  body_text: string
+}
+
+export interface BatchInfo {
+  batch_id: string
+  total: number
+  completed: number
 }
 
 // Models
@@ -56,6 +70,8 @@ export interface Brief {
   target_audience?: string
   key_message?: string
   additional_instructions?: string
+  slides?: SlideData[]
+  inclusion_urls?: string[]
   created_at: string
   updated_at: string
 }
@@ -102,6 +118,8 @@ export interface Generation {
   started_at: string | null
   completed_at: string | null
   total_duration_ms: number | null
+  batch_id?: string
+  format_label?: string
   created_at: string
 }
 

@@ -45,6 +45,8 @@ class GenerationResponse(BaseModel):
 
     id: uuid.UUID
     brief_id: uuid.UUID | None
+    batch_id: uuid.UUID | None = None
+    format_label: str | None = None
     pipeline_context: dict[str, Any] | None
     final_image_url: str | None
     final_score: int | None

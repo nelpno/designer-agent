@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse
 
 from app.config import settings
 from app.database import init_db
-from app.routers import brands, briefs, generations, gallery, websocket
+from app.routers import brands, briefs, config, generations, gallery, websocket
 
 
 @asynccontextmanager
@@ -80,6 +80,7 @@ app.add_middleware(
 # --- Routers ---
 app.include_router(brands.router)
 app.include_router(briefs.router)
+app.include_router(config.router)
 app.include_router(generations.router)
 app.include_router(gallery.router)
 app.include_router(websocket.router)

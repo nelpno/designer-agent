@@ -1,7 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { apiClient, storageUrl } from '../api/client'
-import { Brand } from '../types'
+import { Brand, SlideData } from '../types'
+import { getArtTypeConfig } from '../config/artTypeConfig'
+import TextFieldsSection from '../components/TextFieldsSection'
+import CarouselEditor from '../components/CarouselEditor'
+import InclusionUpload from '../components/InclusionUpload'
+import FormatSelector from '../components/FormatSelector'
 
 const ART_TYPES = [
   { value: 'ad_creative', label: 'Criativo para Ads', icon: (
@@ -9,6 +14,9 @@ const ART_TYPES = [
   )},
   { value: 'social_post', label: 'Post Social', icon: (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
+  )},
+  { value: 'carousel', label: 'Carrossel', icon: (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
   )},
   { value: 'logo', label: 'Logo', icon: (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" /></svg>
@@ -41,40 +49,33 @@ const PLATFORMS = [
   { value: 'general', label: 'Geral' },
 ]
 
-const FORMAT_PRESETS = [
-  { label: '1:1', ratio: '1:1', width: 1080, height: 1080 },
-  { label: '9:16', ratio: '9:16', width: 1080, height: 1920 },
-  { label: '16:9', ratio: '16:9', width: 1200, height: 628 },
-  { label: '4:5', ratio: '4:5', width: 1080, height: 1350 },
-  { label: 'Custom', ratio: null, width: null, height: null },
-]
-
 interface BriefFormData {
   art_type: string
   platform: string
-  format: string
-  custom_width: number
-  custom_height: number
   brand_id: string
-  headline: string
-  body_text: string
-  cta_text: string
-  reference_urls: string[]
   description: string
+  reference_urls: string[]
+  text_fields: Record<string, string>
+  slides: SlideData[]
+  inclusion_urls: string[]
+  selected_formats: string[]
+  quantity: number
 }
 
 const DEFAULT_FORM: BriefFormData = {
   art_type: '',
   platform: 'meta',
-  format: '1080x1080',
-  custom_width: 1080,
-  custom_height: 1080,
   brand_id: '',
-  headline: '',
-  body_text: '',
-  cta_text: '',
-  reference_urls: [''],
   description: '',
+  reference_urls: [''],
+  text_fields: {},
+  slides: [
+    { headline: '', body_text: '' },
+    { headline: '', body_text: '' },
+  ],
+  inclusion_urls: [],
+  selected_formats: ['1:1'],
+  quantity: 1,
 }
 
 /* ─── ProgressSection ─── */
@@ -162,8 +163,6 @@ export default function NewBrief() {
   const navigate = useNavigate()
   const [form, setForm] = useState<BriefFormData>(DEFAULT_FORM)
   const [brands, setBrands] = useState<Brand[]>([])
-  const [selectedPreset, setSelectedPreset] = useState(0)
-  const [isCustomFormat, setIsCustomFormat] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [suggesting, setSuggesting] = useState(false)
   const [uploadedRefs, setUploadedRefs] = useState<Array<{ url: string; filename: string }>>([])
@@ -182,22 +181,31 @@ export default function NewBrief() {
       .catch(() => {})
   }, [])
 
+  const artTypeConfig = form.art_type ? getArtTypeConfig(form.art_type) : undefined
+  const isCarousel = form.art_type === 'carousel'
+  const hasTextFields = artTypeConfig
+    ? artTypeConfig.textFields.filter((f) => f.type !== 'slides').length > 0
+    : false
+  const hasInclusion = artTypeConfig ? artTypeConfig.inclusion !== 'none' : false
+  const hasTextsOrSlides = isCarousel || hasTextFields
+
   function setField<K extends keyof BriefFormData>(key: K, value: BriefFormData[K]) {
     setForm((prev) => ({ ...prev, [key]: value }))
   }
 
-  function handlePresetClick(idx: number) {
-    const preset = FORMAT_PRESETS[idx]
-    setSelectedPreset(idx)
-    if (preset.width && preset.height) {
-      setIsCustomFormat(false)
-      setField('custom_width', preset.width)
-      setField('custom_height', preset.height)
-      setField('format', `${preset.width}x${preset.height}`)
-    } else {
-      setIsCustomFormat(true)
-      setField('format', 'custom')
-    }
+  function handleArtTypeChange(artType: string) {
+    const config = getArtTypeConfig(artType)
+    setForm((prev) => ({
+      ...prev,
+      art_type: artType,
+      text_fields: {},
+      slides: artType === 'carousel'
+        ? [{ headline: '', body_text: '' }, { headline: '', body_text: '' }]
+        : prev.slides,
+      inclusion_urls: config?.inclusion === 'none' ? [] : prev.inclusion_urls,
+      selected_formats: config?.defaultFormats ?? ['1:1'],
+      quantity: 1,
+    }))
   }
 
   function addReferenceUrl() {
@@ -220,19 +228,38 @@ export default function NewBrief() {
   async function handleSuggestTexts() {
     setSuggesting(true)
     try {
-      const params = new URLSearchParams({
+      const body: Record<string, unknown> = {
         art_type: form.art_type,
         platform: form.platform || 'geral',
         description: form.description,
-      })
-      const response = await apiClient.post(`/api/briefs/suggest-texts?${params}`)
+      }
+
+      if (isCarousel) {
+        body.slide_count = form.slides.length
+      }
+
+      const response = await apiClient.post('/api/briefs/suggest-texts', body)
       const suggestions = response.data
-      setForm((prev) => ({
-        ...prev,
-        headline: suggestions.headline || prev.headline,
-        body_text: suggestions.body_text || prev.body_text,
-        cta_text: suggestions.cta_text || prev.cta_text,
-      }))
+
+      if (isCarousel && suggestions.slides) {
+        // Carousel: update slides from suggestion
+        const newSlides = (suggestions.slides as SlideData[]).map((s: SlideData, i: number) => ({
+          headline: s.headline || form.slides[i]?.headline || '',
+          body_text: s.body_text || form.slides[i]?.body_text || '',
+        }))
+        setField('slides', newSlides)
+      } else {
+        // Normal art types: update text_fields
+        const updated = { ...form.text_fields }
+        if (artTypeConfig) {
+          for (const fieldConfig of artTypeConfig.textFields) {
+            if (fieldConfig.type !== 'slides' && suggestions[fieldConfig.field]) {
+              updated[fieldConfig.field] = suggestions[fieldConfig.field]
+            }
+          }
+        }
+        setForm((prev) => ({ ...prev, text_fields: updated }))
+      }
     } catch (e) {
       console.error('Suggestion failed:', e)
     } finally {
@@ -268,19 +295,34 @@ export default function NewBrief() {
       return
     }
 
+    // Validate inclusion requirement
+    if (artTypeConfig?.inclusion === 'required' && form.inclusion_urls.length === 0) {
+      setError('Este tipo de arte requer pelo menos uma imagem de inclusão.')
+      return
+    }
+
+    // Validate at least one format
+    if (form.selected_formats.length === 0) {
+      setError('Selecione pelo menos um formato.')
+      return
+    }
+
     try {
       setSubmitting(true)
 
-      const briefPayload = {
+      // Map text_fields back to brief fields
+      const briefPayload: Record<string, unknown> = {
         art_type: form.art_type,
         platform: form.platform,
-        format: form.format,
-        custom_width: form.format === 'custom' ? form.custom_width : undefined,
-        custom_height: form.format === 'custom' ? form.custom_height : undefined,
+        format: form.selected_formats[0] === '1:1' ? '1080x1080'
+          : form.selected_formats[0] === '9:16' ? '1080x1920'
+          : form.selected_formats[0] === '16:9' ? '1200x628'
+          : form.selected_formats[0] === '4:5' ? '1080x1350'
+          : '1080x1080',
         brand_id: form.brand_id || undefined,
-        headline: form.headline || undefined,
-        body_text: form.body_text || undefined,
-        cta_text: form.cta_text || undefined,
+        headline: form.text_fields.headline || undefined,
+        body_text: form.text_fields.body_text || undefined,
+        cta_text: form.text_fields.cta_text || undefined,
         reference_urls: [
           ...form.reference_urls.filter((u) => u.trim()),
           ...uploadedRefs.map((r) => r.url),
@@ -288,13 +330,42 @@ export default function NewBrief() {
         description: form.description || undefined,
       }
 
+      // Include slides for carousel
+      if (isCarousel) {
+        briefPayload.slides = form.slides
+      }
+
+      // Include inclusion URLs
+      if (form.inclusion_urls.length > 0) {
+        briefPayload.inclusion_urls = form.inclusion_urls
+      }
+
       const briefRes = await apiClient.post<{ id: string }>('/api/briefs', briefPayload)
       const briefId = briefRes.data.id
 
-      const genRes = await apiClient.post<{ id: string }>(`/api/generations/from-brief/${briefId}`)
-      const generationId = genRes.data.id
+      // Pass formats and quantity to generation endpoint
+      const genPayload: Record<string, unknown> = {}
+      if (form.selected_formats.length > 0) {
+        genPayload.formats = form.selected_formats
+      }
+      if (form.quantity > 1) {
+        genPayload.quantity = form.quantity
+      }
 
-      navigate(`/generation/${generationId}`)
+      const genRes = await apiClient.post(
+        `/api/generations/from-brief/${briefId}`,
+        Object.keys(genPayload).length > 0 ? genPayload : undefined
+      )
+
+      // Handle both single and batch responses
+      if (Array.isArray(genRes.data)) {
+        // Batch response — navigate to first generation
+        const firstGen = genRes.data[0]
+        navigate(`/generation/${firstGen.id}`)
+      } else {
+        // Single response
+        navigate(`/generation/${genRes.data.id}`)
+      }
     } catch (err: unknown) {
       const message =
         (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
@@ -305,23 +376,100 @@ export default function NewBrief() {
     }
   }
 
-  // Section completion checks
-  const section1Complete = brandSelected
-  const section2Complete = !!form.art_type
-  const section3Complete = true // description is optional
-  const section4Complete = true // texts are optional
+  // ─── Dynamic section numbering ───
+  // Sections: 1=Marca, 2=Tipo&Plataforma, 3=Descrição&Referências, 4?=Inclusões, 5?=Textos/Slides, 6=Formato&Qtd, 7=Resumo&Gerar
+  // Build section list dynamically
+  type SectionDef = {
+    key: string
+    title: string
+    summary?: string
+    isCompleted: boolean
+  }
+  const sections: SectionDef[] = []
 
-  // Section summaries
-  const section1Summary = selectedBrand ? selectedBrand.name : undefined
+  // 1 - Marca (always)
+  const section1Summary = selectedBrand ? selectedBrand.name : brandSelected ? 'Genérico' : undefined
+  sections.push({
+    key: 'brand',
+    title: 'Marca',
+    summary: section1Summary,
+    isCompleted: brandSelected,
+  })
+
+  // 2 - Tipo & Plataforma (always)
   const section2Summary = form.art_type
-    ? `${ART_TYPES.find((t) => t.value === form.art_type)?.label ?? form.art_type} · ${FORMAT_PRESETS[selectedPreset]?.label ?? form.format}`
+    ? `${ART_TYPES.find((t) => t.value === form.art_type)?.label ?? form.art_type} · ${PLATFORMS.find((p) => p.value === form.platform)?.label ?? form.platform}`
     : undefined
+  sections.push({
+    key: 'type',
+    title: 'Tipo & Plataforma',
+    summary: section2Summary,
+    isCompleted: !!form.art_type,
+  })
+
+  // 3 - Descrição & Referências (always)
   const section3Summary =
     form.description ? form.description.slice(0, 60) + (form.description.length > 60 ? '...' : '') : undefined
-  const section4Summary =
-    form.headline || form.body_text || form.cta_text
-      ? [form.headline, form.cta_text].filter(Boolean).join(' · ') || 'Textos preenchidos'
-      : undefined
+  sections.push({
+    key: 'description',
+    title: 'Descrição & Referências',
+    summary: section3Summary,
+    isCompleted: true, // optional
+  })
+
+  // 4? - Inclusões (if applicable)
+  if (hasInclusion) {
+    sections.push({
+      key: 'inclusions',
+      title: 'Inclusões',
+      summary: form.inclusion_urls.length > 0 ? `${form.inclusion_urls.length} imagem(ns)` : undefined,
+      isCompleted: artTypeConfig?.inclusion === 'required' ? form.inclusion_urls.length > 0 : true,
+    })
+  }
+
+  // 5? - Textos / Slides (if applicable)
+  if (hasTextsOrSlides) {
+    const textSummary = isCarousel
+      ? `${form.slides.length} slides`
+      : Object.values(form.text_fields).filter(Boolean).length > 0
+        ? Object.values(form.text_fields).filter(Boolean).join(' · ').slice(0, 60)
+        : undefined
+    sections.push({
+      key: 'texts',
+      title: isCarousel ? 'Slides' : 'Textos',
+      summary: textSummary,
+      isCompleted: true, // optional
+    })
+  }
+
+  // 6 - Formato & Quantidade (always)
+  sections.push({
+    key: 'format',
+    title: 'Formato & Quantidade',
+    summary: form.selected_formats.length > 0
+      ? `${form.selected_formats.join(', ')} · ${form.selected_formats.length * form.quantity} imagem(ns)`
+      : undefined,
+    isCompleted: form.selected_formats.length > 0,
+  })
+
+  // 7 - Resumo & Gerar (always)
+  sections.push({
+    key: 'summary',
+    title: 'Resumo & Gerar',
+    isCompleted: false,
+  })
+
+  // Map section key to section number (1-based)
+  function getSectionNumber(key: string): number {
+    const idx = sections.findIndex((s) => s.key === key)
+    return idx + 1
+  }
+
+  // Get next section number after current
+  function getNextSection(currentKey: string): number {
+    const idx = sections.findIndex((s) => s.key === currentKey)
+    return idx + 2 // +1 for 0-indexed, +1 for next
+  }
 
   return (
     <div className="p-6 lg:p-8 max-w-[1100px] mx-auto">
@@ -356,14 +504,14 @@ export default function NewBrief() {
           {/* Main column */}
           <div className="flex-1 space-y-4 animate-slide-up" style={{ animationDelay: '60ms' }}>
 
-            {/* Section 1: Marca */}
+            {/* Section: Marca */}
             <ProgressSection
-              number={1}
+              number={getSectionNumber('brand')}
               title="Marca"
-              summary={section1Summary}
-              isOpen={openSection === 1}
-              isCompleted={section1Complete}
-              onToggle={() => setOpenSection(openSection === 1 ? 0 : 1)}
+              summary={sections.find((s) => s.key === 'brand')?.summary}
+              isOpen={openSection === getSectionNumber('brand')}
+              isCompleted={brandSelected}
+              onToggle={() => setOpenSection(openSection === getSectionNumber('brand') ? 0 : getSectionNumber('brand'))}
             >
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {/* No brand option */}
@@ -372,7 +520,7 @@ export default function NewBrief() {
                   onClick={() => {
                     setField('brand_id', '')
                     setBrandSelected(true)
-                    setOpenSection(2)
+                    setOpenSection(getNextSection('brand'))
                   }}
                   className="flex flex-col items-center gap-2 p-4 rounded-xl border text-sm font-medium transition-all duration-200"
                   style={{
@@ -401,7 +549,7 @@ export default function NewBrief() {
                       onClick={() => {
                         setField('brand_id', b.id)
                         setBrandSelected(true)
-                        setOpenSection(2)
+                        setOpenSection(getNextSection('brand'))
                       }}
                       className="flex flex-col items-center gap-2 p-4 rounded-xl border text-sm font-medium transition-all duration-200"
                       style={{
@@ -436,14 +584,14 @@ export default function NewBrief() {
               </div>
             </ProgressSection>
 
-            {/* Section 2: Tipo & Formato */}
+            {/* Section: Tipo & Plataforma */}
             <ProgressSection
-              number={2}
-              title="Tipo & Formato"
-              summary={section2Summary}
-              isOpen={openSection === 2}
-              isCompleted={section2Complete}
-              onToggle={() => setOpenSection(openSection === 2 ? 0 : 2)}
+              number={getSectionNumber('type')}
+              title="Tipo & Plataforma"
+              summary={sections.find((s) => s.key === 'type')?.summary}
+              isOpen={openSection === getSectionNumber('type')}
+              isCompleted={!!form.art_type}
+              onToggle={() => setOpenSection(openSection === getSectionNumber('type') ? 0 : getSectionNumber('type'))}
             >
               <div className="space-y-5">
                 {/* Art Type */}
@@ -461,7 +609,7 @@ export default function NewBrief() {
                         <button
                           key={t.value}
                           type="button"
-                          onClick={() => setField('art_type', t.value)}
+                          onClick={() => handleArtTypeChange(t.value)}
                           className="relative flex flex-col items-center gap-1.5 px-3 py-3 rounded-xl border text-xs font-medium transition-all duration-200"
                           style={{
                             borderColor: isSelected ? 'var(--accent-primary)' : 'var(--border)',
@@ -509,68 +657,11 @@ export default function NewBrief() {
                   </div>
                 </div>
 
-                {/* Format */}
-                <div>
-                  <label
-                    className="block text-xs font-semibold uppercase tracking-wide mb-3"
-                    style={{ color: 'var(--text-secondary)', letterSpacing: '0.5px' }}
-                  >
-                    Formato
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {FORMAT_PRESETS.map((preset, idx) => {
-                      const isSelected = selectedPreset === idx
-                      return (
-                        <button
-                          key={idx}
-                          type="button"
-                          onClick={() => handlePresetClick(idx)}
-                          className="px-4 py-2 rounded-lg text-sm font-medium border transition-all duration-200"
-                          style={{
-                            borderColor: isSelected ? 'var(--accent-primary)' : 'var(--border)',
-                            background: isSelected ? 'rgba(48, 209, 88, 0.08)' : 'transparent',
-                            color: isSelected ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                          }}
-                        >
-                          {preset.label}
-                        </button>
-                      )
-                    })}
-                  </div>
-                  {isCustomFormat && (
-                    <div className="flex items-center gap-3 mt-3">
-                      <div className="flex-1">
-                        <label className="block text-xs mb-1" style={{ color: 'var(--text-tertiary)' }}>Largura (px)</label>
-                        <input
-                          type="number"
-                          value={form.custom_width}
-                          onChange={(e) => setField('custom_width', parseInt(e.target.value) || 1080)}
-                          min={100}
-                          max={4096}
-                          className="artisan-input"
-                        />
-                      </div>
-                      <div className="pt-5 font-medium" style={{ color: 'var(--text-tertiary)' }}>x</div>
-                      <div className="flex-1">
-                        <label className="block text-xs mb-1" style={{ color: 'var(--text-tertiary)' }}>Altura (px)</label>
-                        <input
-                          type="number"
-                          value={form.custom_height}
-                          onChange={(e) => setField('custom_height', parseInt(e.target.value) || 1080)}
-                          min={100}
-                          max={4096}
-                          className="artisan-input"
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-
                 {/* Advance button */}
                 {form.art_type && (
                   <button
                     type="button"
-                    onClick={() => setOpenSection(3)}
+                    onClick={() => setOpenSection(getNextSection('type'))}
                     className="w-full py-2.5 rounded-lg text-sm font-medium transition-all"
                     style={{
                       background: 'rgba(48, 209, 88, 0.08)',
@@ -584,14 +675,14 @@ export default function NewBrief() {
               </div>
             </ProgressSection>
 
-            {/* Section 3: Descrição & Referências */}
+            {/* Section: Descrição & Referências */}
             <ProgressSection
-              number={3}
+              number={getSectionNumber('description')}
               title="Descrição & Referências"
-              summary={section3Summary}
-              isOpen={openSection === 3}
-              isCompleted={openSection > 3 && section3Complete}
-              onToggle={() => setOpenSection(openSection === 3 ? 0 : 3)}
+              summary={sections.find((s) => s.key === 'description')?.summary}
+              isOpen={openSection === getSectionNumber('description')}
+              isCompleted={openSection > getSectionNumber('description')}
+              onToggle={() => setOpenSection(openSection === getSectionNumber('description') ? 0 : getSectionNumber('description'))}
             >
               <div className="space-y-4">
                 <div>
@@ -719,7 +810,7 @@ export default function NewBrief() {
 
                 <button
                   type="button"
-                  onClick={() => setOpenSection(4)}
+                  onClick={() => setOpenSection(getNextSection('description'))}
                   className="w-full py-2.5 rounded-lg text-sm font-medium transition-all"
                   style={{
                     background: 'rgba(48, 209, 88, 0.08)',
@@ -732,91 +823,115 @@ export default function NewBrief() {
               </div>
             </ProgressSection>
 
-            {/* Section 4: Textos */}
-            <ProgressSection
-              number={4}
-              title="Textos"
-              summary={section4Summary}
-              isOpen={openSection === 4}
-              isCompleted={openSection > 4 && section4Complete}
-              onToggle={() => setOpenSection(openSection === 4 ? 0 : 4)}
-            >
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
-                    Título
-                  </label>
-                  <input
-                    type="text"
-                    value={form.headline}
-                    onChange={(e) => setField('headline', e.target.value)}
-                    placeholder="Texto principal do título"
-                    className="artisan-input"
+            {/* Section: Inclusões (conditional) */}
+            {hasInclusion && (
+              <ProgressSection
+                number={getSectionNumber('inclusions')}
+                title="Inclusões"
+                summary={sections.find((s) => s.key === 'inclusions')?.summary}
+                isOpen={openSection === getSectionNumber('inclusions')}
+                isCompleted={sections.find((s) => s.key === 'inclusions')?.isCompleted ?? true}
+                onToggle={() => setOpenSection(openSection === getSectionNumber('inclusions') ? 0 : getSectionNumber('inclusions'))}
+              >
+                <div className="space-y-4">
+                  <InclusionUpload
+                    inclusionUrls={form.inclusion_urls}
+                    onChange={(urls) => setField('inclusion_urls', urls)}
+                    inclusionLabel={artTypeConfig?.inclusionLabel ?? 'Imagens para inclusão'}
+                    required={artTypeConfig?.inclusion === 'required'}
                   />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
-                    Texto
-                  </label>
-                  <textarea
-                    value={form.body_text}
-                    onChange={(e) => setField('body_text', e.target.value)}
-                    placeholder="Texto de apoio..."
-                    rows={3}
-                    className="artisan-input resize-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
-                    CTA
-                  </label>
-                  <input
-                    type="text"
-                    value={form.cta_text}
-                    onChange={(e) => setField('cta_text', e.target.value)}
-                    placeholder="ex: Compre Agora, Saiba Mais, Cadastre-se"
-                    className="artisan-input"
-                  />
-                </div>
-
-                {/* Suggest texts with AI — now has description available from Section 3 */}
-                {form.art_type && (
                   <button
                     type="button"
-                    onClick={handleSuggestTexts}
-                    disabled={suggesting}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={() => setOpenSection(getNextSection('inclusions'))}
+                    className="w-full py-2.5 rounded-lg text-sm font-medium transition-all"
                     style={{
-                      color: 'var(--accent-secondary)',
-                      border: '1px solid rgba(90, 200, 250, 0.3)',
-                      background: 'rgba(90, 200, 250, 0.06)',
-                      fontFamily: 'var(--font-heading)',
+                      background: 'rgba(48, 209, 88, 0.08)',
+                      color: 'var(--accent-primary)',
+                      border: '1px solid rgba(48, 209, 88, 0.2)',
                     }}
                   >
-                    {suggesting ? (
-                      <>
-                        <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                        </svg>
-                        <span>Gerando sugestões...</span>
-                      </>
-                    ) : (
-                      <>
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                        </svg>
-                        <span>Sugerir Textos com IA</span>
-                      </>
-                    )}
+                    Continuar →
                   </button>
+                </div>
+              </ProgressSection>
+            )}
+
+            {/* Section: Textos / Slides (conditional) */}
+            {hasTextsOrSlides && (
+              <ProgressSection
+                number={getSectionNumber('texts')}
+                title={isCarousel ? 'Slides' : 'Textos'}
+                summary={sections.find((s) => s.key === 'texts')?.summary}
+                isOpen={openSection === getSectionNumber('texts')}
+                isCompleted={openSection > getSectionNumber('texts')}
+                onToggle={() => setOpenSection(openSection === getSectionNumber('texts') ? 0 : getSectionNumber('texts'))}
+              >
+                <div className="space-y-4">
+                  {isCarousel ? (
+                    <CarouselEditor
+                      slides={form.slides}
+                      onChange={(slides) => setField('slides', slides)}
+                      onSuggestTexts={handleSuggestTexts}
+                      suggesting={suggesting}
+                    />
+                  ) : (
+                    <TextFieldsSection
+                      artType={form.art_type}
+                      formValues={form.text_fields}
+                      onChange={(field, value) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          text_fields: { ...prev.text_fields, [field]: value },
+                        }))
+                      }
+                      onSuggestTexts={handleSuggestTexts}
+                      suggesting={suggesting}
+                    />
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => setOpenSection(getNextSection('texts'))}
+                    className="w-full py-2.5 rounded-lg text-sm font-medium transition-all"
+                    style={{
+                      background: 'rgba(48, 209, 88, 0.08)',
+                      color: 'var(--accent-primary)',
+                      border: '1px solid rgba(48, 209, 88, 0.2)',
+                    }}
+                  >
+                    Continuar →
+                  </button>
+                </div>
+              </ProgressSection>
+            )}
+
+            {/* Section: Formato & Quantidade */}
+            <ProgressSection
+              number={getSectionNumber('format')}
+              title="Formato & Quantidade"
+              summary={sections.find((s) => s.key === 'format')?.summary}
+              isOpen={openSection === getSectionNumber('format')}
+              isCompleted={form.selected_formats.length > 0 && openSection > getSectionNumber('format')}
+              onToggle={() => setOpenSection(openSection === getSectionNumber('format') ? 0 : getSectionNumber('format'))}
+            >
+              <div className="space-y-4">
+                {form.art_type ? (
+                  <FormatSelector
+                    artType={form.art_type}
+                    selectedFormats={form.selected_formats}
+                    quantity={form.quantity}
+                    onFormatsChange={(formats) => setField('selected_formats', formats)}
+                    onQuantityChange={(qty) => setField('quantity', qty)}
+                  />
+                ) : (
+                  <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>
+                    Selecione um tipo de arte primeiro
+                  </p>
                 )}
 
                 <button
                   type="button"
-                  onClick={() => setOpenSection(5)}
+                  onClick={() => setOpenSection(getNextSection('format'))}
                   className="w-full py-2.5 rounded-lg text-sm font-medium transition-all"
                   style={{
                     background: 'rgba(48, 209, 88, 0.08)',
@@ -829,13 +944,13 @@ export default function NewBrief() {
               </div>
             </ProgressSection>
 
-            {/* Section 5: Resumo & Gerar */}
+            {/* Section: Resumo & Gerar */}
             <ProgressSection
-              number={5}
+              number={getSectionNumber('summary')}
               title="Resumo & Gerar"
-              isOpen={openSection === 5}
+              isOpen={openSection === getSectionNumber('summary')}
               isCompleted={false}
-              onToggle={() => setOpenSection(openSection === 5 ? 0 : 5)}
+              onToggle={() => setOpenSection(openSection === getSectionNumber('summary') ? 0 : getSectionNumber('summary'))}
             >
               <div className="space-y-4">
                 {/* Summary */}
@@ -868,18 +983,46 @@ export default function NewBrief() {
                       </dd>
                     </div>
                     <div className="flex items-center justify-between">
-                      <dt className="text-sm" style={{ color: 'var(--text-secondary)' }}>Formato</dt>
+                      <dt className="text-sm" style={{ color: 'var(--text-secondary)' }}>Formatos</dt>
                       <dd className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-                        {form.format === 'custom'
-                          ? `${form.custom_width} x ${form.custom_height}`
-                          : FORMAT_PRESETS[selectedPreset]?.label ?? form.format}
+                        {form.selected_formats.join(', ')}
                       </dd>
                     </div>
-                    {form.headline && (
+                    {form.quantity > 1 && (
+                      <div className="flex items-center justify-between">
+                        <dt className="text-sm" style={{ color: 'var(--text-secondary)' }}>Quantidade</dt>
+                        <dd className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                          {form.quantity} por formato
+                        </dd>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between">
+                      <dt className="text-sm" style={{ color: 'var(--text-secondary)' }}>Total de Imagens</dt>
+                      <dd className="text-sm font-bold" style={{ color: 'var(--accent-primary)' }}>
+                        {form.selected_formats.length * form.quantity}
+                      </dd>
+                    </div>
+                    {isCarousel && (
+                      <div className="flex items-center justify-between">
+                        <dt className="text-sm" style={{ color: 'var(--text-secondary)' }}>Slides</dt>
+                        <dd className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                          {form.slides.length}
+                        </dd>
+                      </div>
+                    )}
+                    {form.inclusion_urls.length > 0 && (
+                      <div className="flex items-center justify-between">
+                        <dt className="text-sm" style={{ color: 'var(--text-secondary)' }}>Inclusões</dt>
+                        <dd className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                          {form.inclusion_urls.length} imagem(ns)
+                        </dd>
+                      </div>
+                    )}
+                    {form.text_fields.headline && (
                       <div className="pt-2" style={{ borderTop: '1px solid var(--border)' }}>
                         <dt className="text-xs mb-1" style={{ color: 'var(--text-tertiary)' }}>Título</dt>
                         <dd className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-                          "{form.headline}"
+                          "{form.text_fields.headline}"
                         </dd>
                       </div>
                     )}
@@ -973,13 +1116,33 @@ export default function NewBrief() {
                       </dd>
                     </div>
 
-                    {/* Format */}
+                    {/* Formats */}
                     <div className="flex items-center justify-between">
-                      <dt style={{ color: 'var(--text-tertiary)' }}>Formato</dt>
+                      <dt style={{ color: 'var(--text-tertiary)' }}>Formatos</dt>
                       <dd className="font-medium" style={{ color: 'var(--text-primary)' }}>
-                        {FORMAT_PRESETS[selectedPreset]?.label ?? form.format}
+                        {form.selected_formats.join(', ')}
                       </dd>
                     </div>
+
+                    {/* Total images */}
+                    {form.selected_formats.length * form.quantity > 1 && (
+                      <div className="flex items-center justify-between">
+                        <dt style={{ color: 'var(--text-tertiary)' }}>Imagens</dt>
+                        <dd className="font-bold" style={{ color: 'var(--accent-primary)' }}>
+                          {form.selected_formats.length * form.quantity}
+                        </dd>
+                      </div>
+                    )}
+
+                    {/* Carousel slides */}
+                    {isCarousel && (
+                      <div className="flex items-center justify-between">
+                        <dt style={{ color: 'var(--text-tertiary)' }}>Slides</dt>
+                        <dd className="font-medium" style={{ color: 'var(--text-primary)' }}>
+                          {form.slides.length}
+                        </dd>
+                      </div>
+                    )}
 
                     {/* Brand colors */}
                     {selectedBrand && selectedBrand.primary_colors.length > 0 && (
@@ -998,11 +1161,11 @@ export default function NewBrief() {
                     )}
 
                     {/* Headline preview */}
-                    {form.headline && (
+                    {form.text_fields.headline && (
                       <div className="pt-2" style={{ borderTop: '1px solid var(--border)' }}>
                         <dt className="mb-1" style={{ color: 'var(--text-tertiary)' }}>Título</dt>
                         <dd className="font-medium leading-snug" style={{ color: 'var(--text-primary)' }}>
-                          "{form.headline}"
+                          "{form.text_fields.headline}"
                         </dd>
                       </div>
                     )}

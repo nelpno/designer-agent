@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import ARRAY, TEXT, VARCHAR, DateTime, ForeignKey, Integer, func
+from sqlalchemy import ARRAY, JSON, TEXT, VARCHAR, DateTime, ForeignKey, Integer, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -29,6 +29,8 @@ class Brief(Base):
     cta_text: Mapped[str | None] = mapped_column(VARCHAR(100), nullable=True)
     description: Mapped[str | None] = mapped_column(TEXT, nullable=True)
     reference_urls: Mapped[list[str] | None] = mapped_column(ARRAY(TEXT), nullable=True)
+    slides: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    inclusion_urls: Mapped[list[str] | None] = mapped_column(ARRAY(TEXT), nullable=True)
     status: Mapped[str] = mapped_column(VARCHAR(20), nullable=False, server_default="draft")
     created_by: Mapped[str | None] = mapped_column(VARCHAR(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(

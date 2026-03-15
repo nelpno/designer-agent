@@ -1,4 +1,6 @@
 import axios from 'axios'
+import type { Generation } from '../types'
+import type { ArtTypeConfig } from '../config/artTypeConfig'
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 
@@ -24,4 +26,33 @@ export function storageUrl(path: string | null | undefined): string {
   if (path.startsWith('http') || path.startsWith('data:')) return path
   if (path.startsWith('/storage/')) return `${BASE_URL}${path}`
   return `${BASE_URL}/storage/${path}`
+}
+
+/**
+ * Upload de asset para inclusão (deve aparecer NA arte).
+ * Mesma validação do upload de referência (magic bytes, 10MB).
+ */
+export async function uploadInclusion(file: File): Promise<{ url: string; filename: string }> {
+  const formData = new FormData()
+  formData.append('file', file)
+  const response = await apiClient.post('/api/briefs/upload-inclusion', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return response.data
+}
+
+/**
+ * Busca gerações de um batch.
+ */
+export async function fetchBatch(batchId: string): Promise<Generation[]> {
+  const response = await apiClient.get<Generation[]>(`/api/generations/batch/${batchId}`)
+  return response.data
+}
+
+/**
+ * Busca config de art types do backend (cache no frontend via artTypeConfig.ts).
+ */
+export async function fetchArtTypeConfig(): Promise<Record<string, ArtTypeConfig>> {
+  const response = await apiClient.get<Record<string, ArtTypeConfig>>('/api/config/art-types')
+  return response.data
 }

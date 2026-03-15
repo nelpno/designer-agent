@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-from app.agents.context import PipelineContext
+from app.agents.context import PipelineContext, CreativeDirection
 from app.agents.creative_director import CreativeDirectorAgent
 from app.agents.prompt_engineer import PromptEngineerAgent
 from app.agents.generator import GeneratorAgent
@@ -61,9 +61,24 @@ async def run_pipeline(context: PipelineContext) -> PipelineContext:
         context.current_status = "running"
 
         # Step 1: Creative Director
-        logger.info(f"[{context.brief_id}] Running Creative Director...")
-        creative_director = CreativeDirectorAgent(client)
-        context = await creative_director.run(context)
+        if context.shared_creative_direction:
+            # Reuse shared Creative Director results from batch
+            logger.info(f"[{context.brief_id}] Reusing shared Creative Director results...")
+            context.creative_direction = CreativeDirection(
+                **context.shared_creative_direction["creative_direction"]
+            )
+            context.enhanced_description = context.shared_creative_direction.get(
+                "enhanced_description"
+            )
+            context.log_decision(
+                agent_name="creative_director",
+                decision="Reused shared Creative Director results from batch",
+                reasoning="Batch mode: Creative Director ran once for all generations",
+            )
+        else:
+            logger.info(f"[{context.brief_id}] Running Creative Director...")
+            creative_director = CreativeDirectorAgent(client)
+            context = await creative_director.run(context)
 
         # Save log immediately
         last_log = context.decision_log[-1] if context.decision_log else None

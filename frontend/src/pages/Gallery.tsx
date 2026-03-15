@@ -16,7 +16,6 @@ const STATUS_FILTERS = [
 
 function ImageCard({ generation }: { generation: Generation }) {
   const thumbnail = storageUrl(generation.final_image_url)
-  const artType = (generation as Record<string, unknown>).art_type as string | undefined
 
   return (
     <Link
@@ -62,6 +61,22 @@ function ImageCard({ generation }: { generation: Generation }) {
           <StatusBadge status={generation.status} />
         </div>
 
+        {/* Format label badge */}
+        {generation.format_label && (
+          <div className="absolute top-2.5 right-2.5">
+            <span
+              className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold"
+              style={{
+                background: 'rgba(90, 200, 250, 0.15)',
+                color: 'var(--color-info)',
+                border: '1px solid rgba(90, 200, 250, 0.2)',
+              }}
+            >
+              {generation.format_label}
+            </span>
+          </div>
+        )}
+
         {/* Score on hover */}
         {generation.final_score != null && (
           <div className="absolute top-2.5 right-2.5 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -86,16 +101,15 @@ function ImageCard({ generation }: { generation: Generation }) {
       {/* Card footer */}
       <div className="p-3" style={{ borderTop: '1px solid var(--border)' }}>
         <div className="flex items-center gap-2 flex-wrap min-w-0">
-          {artType && (
+          {generation.format_label && (
             <span
-              className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium capitalize truncate"
+              className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium"
               style={{
-                background: 'rgba(48, 209, 88, 0.1)',
-                color: 'var(--accent-primary)',
-                border: '1px solid rgba(48, 209, 88, 0.15)',
+                background: 'rgba(90, 200, 250, 0.08)',
+                color: 'var(--accent-secondary)',
               }}
             >
-              {artType.replace(/_/g, ' ')}
+              {generation.format_label}
             </span>
           )}
           {generation.model_used && (
@@ -113,6 +127,91 @@ function ImageCard({ generation }: { generation: Generation }) {
         </p>
       </div>
     </Link>
+  )
+}
+
+/** Group card for batch generations */
+function BatchCard({ batchId, generations }: { batchId: string; generations: Generation[] }) {
+  const completed = generations.filter((g) => g.status === 'completed')
+  const total = generations.length
+
+  return (
+    <div
+      className="artisan-card overflow-hidden"
+    >
+      {/* Batch header */}
+      <div
+        className="px-3 py-2 flex items-center justify-between"
+        style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-tertiary)' }}
+      >
+        <div className="flex items-center gap-2">
+          <svg className="w-3.5 h-3.5" style={{ color: 'var(--accent-secondary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+          </svg>
+          <span className="text-[11px] font-semibold" style={{ color: 'var(--text-secondary)' }}>
+            Lote · {completed.length}/{total}
+          </span>
+        </div>
+      </div>
+
+      {/* Horizontal scroll thumbnails */}
+      <div className="flex overflow-x-auto gap-1 p-2">
+        {generations.map((gen) => {
+          const thumb = storageUrl(gen.final_image_url)
+          return (
+            <Link
+              key={gen.id}
+              to={`/generation/${gen.id}`}
+              className="flex-shrink-0 relative group rounded-lg overflow-hidden"
+              style={{ width: '80px', height: '80px', border: '1px solid var(--border)' }}
+            >
+              {thumb ? (
+                <img
+                  src={thumb}
+                  alt={gen.format_label || 'Imagem'}
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                />
+              ) : (
+                <div
+                  className="w-full h-full flex items-center justify-center"
+                  style={{ background: 'var(--bg-tertiary)' }}
+                >
+                  {gen.status === 'completed' ? (
+                    <svg className="w-5 h-5" style={{ color: 'var(--text-tertiary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14" />
+                    </svg>
+                  ) : (
+                    <StatusBadge status={gen.status} />
+                  )}
+                </div>
+              )}
+              {gen.format_label && (
+                <div
+                  className="absolute bottom-0 left-0 right-0 text-center text-[9px] font-semibold py-0.5"
+                  style={{
+                    background: 'rgba(0,0,0,0.6)',
+                    color: 'rgba(255,255,255,0.85)',
+                  }}
+                >
+                  {gen.format_label}
+                </div>
+              )}
+            </Link>
+          )
+        })}
+      </div>
+
+      {/* Footer */}
+      <div className="px-3 py-2" style={{ borderTop: '1px solid var(--border)' }}>
+        <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+          {new Date(generations[0].created_at).toLocaleDateString('pt-BR', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+          })}
+        </p>
+      </div>
+    </div>
   )
 }
 
@@ -146,6 +245,39 @@ export default function Gallery() {
     if (modelFilter && g.model_used !== modelFilter) return false
     return true
   })
+
+  // Group by batch_id — generations with batch_id are grouped, others are standalone
+  type DisplayItem =
+    | { type: 'single'; generation: Generation }
+    | { type: 'batch'; batchId: string; generations: Generation[] }
+
+  const displayItems: DisplayItem[] = []
+  const batchMap = new Map<string, Generation[]>()
+  const seenBatchIds = new Set<string>()
+
+  for (const gen of filtered) {
+    if (gen.batch_id) {
+      if (!batchMap.has(gen.batch_id)) {
+        batchMap.set(gen.batch_id, [])
+      }
+      batchMap.get(gen.batch_id)!.push(gen)
+    }
+  }
+
+  for (const gen of filtered) {
+    if (gen.batch_id) {
+      if (!seenBatchIds.has(gen.batch_id)) {
+        seenBatchIds.add(gen.batch_id)
+        displayItems.push({
+          type: 'batch',
+          batchId: gen.batch_id,
+          generations: batchMap.get(gen.batch_id)!,
+        })
+      }
+    } else {
+      displayItems.push({ type: 'single', generation: gen })
+    }
+  }
 
   return (
     <div className="p-6 lg:p-8 max-w-[1400px] mx-auto">
@@ -260,7 +392,7 @@ export default function Gallery() {
             />
           ))}
         </div>
-      ) : filtered.length === 0 ? (
+      ) : displayItems.length === 0 ? (
         <div className="artisan-card-static p-16 text-center animate-slide-up">
           <div
             className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5"
@@ -297,9 +429,16 @@ export default function Gallery() {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 stagger-children">
-          {filtered.map((gen) => (
-            <div key={gen.id} className="animate-slide-up">
-              <ImageCard generation={gen} />
+          {displayItems.map((item) => (
+            <div
+              key={item.type === 'batch' ? `batch-${item.batchId}` : item.generation.id}
+              className="animate-slide-up"
+            >
+              {item.type === 'batch' ? (
+                <BatchCard batchId={item.batchId} generations={item.generations} />
+              ) : (
+                <ImageCard generation={item.generation} />
+              )}
             </div>
           ))}
         </div>

@@ -15,6 +15,8 @@ class BriefData:
     cta_text: str | None = None
     description: str | None = None
     reference_urls: list[str] = field(default_factory=list)
+    inclusion_urls: list[str] = field(default_factory=list)
+    slides: list[dict] | None = None
     custom_width: int | None = None
     custom_height: int | None = None
 
@@ -107,6 +109,15 @@ class PipelineContext:
     brand: BrandGuidelines | None = None
     generation_id: str | None = None  # unique per generation (used for storage paths)
 
+    # Batch / multi-format fields
+    batch_id: str | None = None
+    format_label: str | None = None
+    shared_creative_direction: dict | None = None  # shared across batch
+
+    # Carousel per-slide fields
+    current_slide_index: int | None = None  # which slide this generation is for
+    total_slides: int | None = None  # total slides in the carousel
+
     # Agent outputs (populated as pipeline progresses)
     enhanced_description: str | None = None  # enriched by Creative Director
     creative_direction: CreativeDirection | None = None
@@ -136,23 +147,31 @@ class PipelineContext:
         from dataclasses import asdict
         return asdict(self)
 
+    @staticmethod
+    def _filter_fields(cls, data: dict) -> dict:
+        """Filter dict to only known fields of a dataclass."""
+        from dataclasses import fields as dc_fields
+        valid = {f.name for f in dc_fields(cls)}
+        return {k: v for k, v in data.items() if k in valid}
+
     @classmethod
     def from_dict(cls, data: dict) -> "PipelineContext":
         """Deserialize from dict."""
-        # Reconstruct nested dataclasses
-        data["brief"] = BriefData(**data["brief"])
+        _ff = cls._filter_fields
+
+        # Reconstruct nested dataclasses (filter unknown fields for compatibility)
+        data["brief"] = BriefData(**_ff(BriefData, data["brief"]))
         if data.get("brand"):
-            data["brand"] = BrandGuidelines(**data["brand"])
+            data["brand"] = BrandGuidelines(**_ff(BrandGuidelines, data["brand"]))
         if data.get("creative_direction"):
-            data["creative_direction"] = CreativeDirection(**data["creative_direction"])
+            data["creative_direction"] = CreativeDirection(**_ff(CreativeDirection, data["creative_direction"]))
         if data.get("generation_prompt"):
-            data["generation_prompt"] = GenerationPrompt(**data["generation_prompt"])
-        data["generated_images"] = [GeneratedImage(**img) for img in data.get("generated_images", [])]
+            data["generation_prompt"] = GenerationPrompt(**_ff(GenerationPrompt, data["generation_prompt"]))
+        data["generated_images"] = [GeneratedImage(**_ff(GeneratedImage, img)) for img in data.get("generated_images", [])]
         if data.get("review"):
-            data["review"] = QualityReview(**data["review"])
-        data["refinement_history"] = [RefinementStep(**r) for r in data.get("refinement_history", [])]
-        data["decision_log"] = [DecisionEntry(**d) for d in data.get("decision_log", [])]
+            data["review"] = QualityReview(**_ff(QualityReview, data["review"]))
+        data["refinement_history"] = [RefinementStep(**_ff(RefinementStep, r)) for r in data.get("refinement_history", [])]
+        data["decision_log"] = [DecisionEntry(**_ff(DecisionEntry, d)) for d in data.get("decision_log", [])]
         # Filter to only known fields for forward/backward compatibility
-        valid_fields = {f.name for f in __import__('dataclasses').fields(cls)}
-        filtered = {k: v for k, v in data.items() if k in valid_fields}
+        filtered = _ff(cls, data)
         return cls(**filtered)

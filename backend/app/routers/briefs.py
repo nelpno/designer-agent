@@ -3,6 +3,7 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile, status
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session
@@ -32,30 +33,70 @@ async def list_briefs(
     return [BriefResponse.model_validate(b) for b in briefs]
 
 
+class SuggestTextsRequest(BaseModel):
+    art_type: str
+    platform: str | None = None
+    description: str = ""
+    slide_count: int = 0
+
+
 @router.post("/suggest-texts")
-async def suggest_texts(
-    art_type: str,
-    platform: str | None = None,
-    description: str = "",
-):
-    """AI suggests headline, body text, and CTA based on description."""
+async def suggest_texts(request: SuggestTextsRequest):
+    """AI suggests headline, body text, and CTA based on description.
+
+    For carousel (slide_count > 0): returns {slides: [{headline, body_text}, ...]}.
+    For other types: returns fields based on art_type_config (omits CTA if not applicable).
+    """
     from app.providers.openrouter_client import OpenRouterClient
     from app.config import get_settings
+    from app.config.art_type_config import get_art_type_config, get_text_fields
     import json, re
 
     settings = get_settings()
     client = OpenRouterClient()
 
     try:
-        system_prompt = """Você é um copywriter especialista em marketing digital.
+        art_type = request.art_type
+        platform = request.platform
+        description = request.description
+        slide_count = request.slide_count
+
+        # Determine which fields to return based on art type config
+        config = get_art_type_config(art_type)
+        text_field_names = get_text_fields(art_type) if config else ["headline", "body_text", "cta_text"]
+
+        if slide_count > 0:
+            # Carousel mode — generate per-slide texts
+            system_prompt = f"""Você é um copywriter especialista em marketing digital.
+Dado um tipo de arte e uma descrição, sugira textos criativos e persuasivos para um carrossel com {slide_count} slides.
+
+Responda APENAS com JSON válido:
+{{
+    "slides": [
+        {{"headline": "Título do slide (curto, impactante)", "body_text": "Texto de apoio do slide"}},
+        ...
+    ]
+}}
+
+Cada slide deve ter uma mensagem que progride naturalmente (storytelling).
+Gere exatamente {slide_count} slides."""
+        else:
+            # Build dynamic JSON format based on art type config
+            field_descriptions = {
+                "headline": '"headline": "Título principal (curto, impactante, máx 60 chars)"',
+                "body_text": '"body_text": "Texto de apoio (1-2 frases, persuasivo)"',
+                "cta_text": '"cta_text": "Call to action (2-4 palavras, ex: Compre Agora, Saiba Mais)"',
+            }
+            json_fields = ",\n    ".join(
+                field_descriptions[f] for f in text_field_names if f in field_descriptions
+            )
+            system_prompt = f"""Você é um copywriter especialista em marketing digital.
 Dado um tipo de arte e uma descrição, sugira textos criativos e persuasivos.
 
 Responda APENAS com JSON válido:
-{
-    "headline": "Título principal (curto, impactante, máx 60 chars)",
-    "body_text": "Texto de apoio (1-2 frases, persuasivo)",
-    "cta_text": "Call to action (2-4 palavras, ex: Compre Agora, Saiba Mais)"
-}"""
+{{
+    {json_fields}
+}}"""
 
         user_prompt = f"Tipo de arte: {art_type}\nPlataforma: {platform or 'geral'}\nDescrição: {description}"
 
@@ -66,7 +107,7 @@ Responda APENAS com JSON válido:
                 {"role": "user", "content": user_prompt}
             ],
             temperature=0.8,
-            max_tokens=500,
+            max_tokens=1024,
         )
 
         text = response_text.strip()
@@ -76,6 +117,8 @@ Responda APENAS com JSON válido:
 
         return json.loads(text)
     except Exception:
+        if slide_count > 0:
+            return {"slides": [], "error": "Falha ao gerar sugestões."}
         return {"headline": "", "body_text": "", "cta_text": "", "error": "Falha ao gerar sugestões."}
     finally:
         await client.close()
@@ -132,6 +175,38 @@ async def upload_reference(file: UploadFile = File(...)):
     file_path.write_bytes(content)
 
     return {"url": f"/storage/references/{filename}", "filename": filename}
+
+
+@router.post("/upload-inclusion")
+async def upload_inclusion(file: UploadFile = File(...)):
+    """Upload an inclusion image (asset that MUST appear in the generated art)."""
+    import uuid as _uuid
+    from pathlib import Path
+    from app.config import get_settings
+
+    settings = get_settings()
+
+    # Read with size limit
+    content = await file.read(MAX_UPLOAD_SIZE + 1)
+    if len(content) > MAX_UPLOAD_SIZE:
+        raise HTTPException(status_code=413, detail="Arquivo muito grande (max 10MB)")
+
+    # Validate actual content type via magic bytes (ignore client Content-Type)
+    detected_ext = _detect_image_type(content)
+    if not detected_ext:
+        raise HTTPException(status_code=400, detail="Tipo de arquivo inválido. Apenas PNG, JPG, WebP e GIF são aceitos.")
+
+    # Force safe extension from detected type
+    inc_id = str(_uuid.uuid4())[:8]
+    filename = f"inc_{inc_id}.{detected_ext}"
+
+    save_dir = Path(settings.STORAGE_PATH) / "inclusions"
+    save_dir.mkdir(parents=True, exist_ok=True)
+
+    file_path = save_dir / filename
+    file_path.write_bytes(content)
+
+    return {"url": f"/storage/inclusions/{filename}", "filename": filename}
 
 
 @router.get("/{brief_id}", response_model=BriefResponse)
