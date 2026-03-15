@@ -1,6 +1,6 @@
 # Artisan
 
-## Status: Em produção (v1.4) — 39 commits
+## Status: Em produção (v1.4) — 44 commits
 
 ## URLs
 - **Frontend**: http://82.29.60.220:8086 (direto)
@@ -141,7 +141,7 @@ frontend/src/
 ## Gotchas
 - Traefik redireciona HTTP→HTTPS globalmente. Cloudflare SSL deve estar em "Full"
 - Vite precisa de `allowedHosts: true` para aceitar qualquer hostname
-- CORS: restrito a `FRONTEND_URL` em produção, wildcard só com `DEBUG=true`
+- CORS: `FRONTEND_URL=*` para wildcard; aceita automaticamente HTTP e HTTPS do mesmo domínio
 - UUID: sempre converter str→uuid.UUID() antes de query no SQLAlchemy
 - Celery + asyncpg: cada task cria engine próprio (event loop separado)
 - FLUX.2 retorna images como `[{type:"image_url", image_url:{url:"data:..."}}]`
@@ -154,6 +154,11 @@ frontend/src/
 - Carrossel: cada slide vira uma geração separada (× formatos), com `current_slide_index` e `total_slides` no contexto
 - Inclusões vs Referências: `inclusion_urls` separado de `reference_urls`; prompt diz "MUST appear" para inclusões
 - suggest-texts aceita body JSON (não query params) — descrições longas não truncam
+- Reviewer rigoroso: `visual_integrity_score` + `hard_reject` para artefatos visuais graves
+- Reviewer rejeita → Refiner corrige prompt → Generator re-gera → até 3 iterações
+- TODOS os routers: `redirect_slashes=False` — evitar 307 que quebra via Traefik (Location usa http://)
+- Download endpoint detecta media type real (PNG/JPEG/WebP) — não força PNG
+- `VITE_API_URL=https://design.dynamicagents.tech` na stack Portainer (HTTP page → HTTPS API é permitido)
 - Swagger/docs desabilitado em produção (DEBUG=false) — habilitar com `DEBUG=true`
 - Auth middleware opt-in: sem `API_SECRET_KEY` configurada = sem auth (modo dev)
 - Request body limit global: 15MB (middleware)
