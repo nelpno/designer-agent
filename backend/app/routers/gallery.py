@@ -4,9 +4,9 @@ from sqlalchemy import select, func, case
 from app.database import get_session
 from app.models.generation import Generation
 
-router = APIRouter(prefix="/api/gallery", tags=["gallery"])
+router = APIRouter(prefix="/api/gallery", tags=["gallery"], redirect_slashes=False)
 
-@router.get("/")
+@router.get("")
 async def get_gallery(
     skip: int = Query(default=0, ge=0, le=10000),
     limit: int = Query(default=50, ge=1, le=100),

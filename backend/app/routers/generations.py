@@ -29,7 +29,7 @@ from app.config.art_type_config import (
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/generations", tags=["generations"])
+router = APIRouter(prefix="/api/generations", tags=["generations"], redirect_slashes=False)
 
 
 class StartGenerationBody(BaseModel):
@@ -315,7 +315,7 @@ async def get_batch_generations(
     return [GenerationResponse.model_validate(g) for g in generations]
 
 
-@router.get("/", response_model=list[GenerationResponse])
+@router.get("", response_model=list[GenerationResponse])
 async def list_generations(
     skip: int = Query(default=0, ge=0, le=10000),
     limit: int = Query(default=20, ge=1, le=100),
