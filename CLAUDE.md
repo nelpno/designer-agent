@@ -1,6 +1,6 @@
 # Artisan
 
-## Status: Em produção (v1.3) — 38 commits
+## Status: Em produção (v1.4) — 39 commits
 
 ## URLs
 - **Frontend**: http://82.29.60.220:8086 (direto)
@@ -37,6 +37,7 @@ Plataforma interna de geração de artes estáticas com IA chamada **Artisan**. 
 |---|---|---|
 | Logo / texto pesado | Nano Banana Pro | Melhor texto em imagens |
 | Ad com CTA/headline | Nano Banana Pro | Texto perfeito |
+| Carrossel | Nano Banana Pro | Coerência visual + texto |
 | Product shot / foto | FLUX.2 Pro | Fotorrealismo |
 | Post social media | Nano Banana 2 | Rápido, bom custo |
 | Ilustração | Nano Banana Pro | Estilo artístico |
@@ -45,8 +46,13 @@ Plataforma interna de geração de artes estáticas com IA chamada **Artisan**. 
 ## Features
 - **Pipeline 5 Agentes**: Creative Director → Prompt Engineer → Generator → Reviewer → Refiner
 - **Quality Loop**: Reviewer avalia (score 0-100), Refiner corrige, até 3 iterações
+- **Formulário Dinâmico**: campos mudam por tipo de arte (config-driven, art_type_config.py)
+- **Multi-formato**: gerar mesma arte em múltiplos aspect ratios (1:1 + 9:16 + 16:9) com batch_id
+- **Carrossel**: art type com editor de slides (2-10), geração de N imagens com coerência visual
+- **Inclusões**: upload de assets que devem aparecer NA arte (separado de referências visuais)
+- **Creative Director Compartilhado**: no batch, CD roda 1x e resultado é reusado por todas as gerações
 - **Brand Discovery**: IA analisa site, Instagram, about pages e logo via vision — output em PT-BR
-- **Sugestão de Textos com IA**: sugere título, texto e CTA baseado na descrição
+- **Sugestão de Textos com IA**: sugere textos baseado na descrição, respeita campos do art type, suporte carrossel
 - **Upload de Referências**: drag-and-drop de imagens de referência (enviadas ao modelo como base64)
 - **Upload de Logo**: na gestão de marcas (suporta data URL e arquivo)
 - **Model Router**: seleção automática do melhor modelo por tipo de arte
@@ -55,12 +61,14 @@ Plataforma interna de geração de artes estáticas com IA chamada **Artisan**. 
 - **Pipeline em Tempo Real**: logs persistidos após cada agente, WebSocket + polling inteligente
 - **Download de Imagens**: endpoint dedicado com Content-Disposition attachment
 - **Dark/Light Mode**: tema segue sistema + toggle manual (ThemeProvider + localStorage)
-- **Fluxo Progressivo**: criação de arte em seções que revelam conforme avança (tudo-em-um)
+- **Fluxo Progressivo**: criação de arte em seções dinâmicas que revelam conforme avança
 - **Auth Middleware**: API key opcional via `API_SECRET_KEY` env var
 - **Upload Seguro**: validação magic bytes, limite 10MB, extensão forçada
 - **Sidebar Responsiva**: hamburger menu no mobile, touch targets 44px
 - **Pipeline Visual**: nomes dos agentes (Creative Director, etc.), duração human-readable, raciocínio expansível
 - **Mobile Otimizado**: stats 2 colunas, art types 2 colunas, padding responsivo, stack vertical
+- **Gallery com Batch**: gerações agrupadas por batch_id, carrossel com scroll horizontal
+- **Config API**: `GET /api/config/art-types` expõe config para API futura do planejador
 
 ## Design System — Artisan
 - **Nome**: Artisan (logo ❖ com gradiente verde→ciano)
@@ -79,20 +87,23 @@ backend/app/
 ├── agents/          # creative_director, prompt_engineer, generator, reviewer, refiner
 │   ├── orchestrator.py   # Pipeline controller com loop de qualidade
 │   └── context.py        # PipelineContext compartilhado entre agentes
+├── config/          # Settings + art_type_config.py (campos dinâmicos por art type)
 ├── providers/       # openrouter_client.py (LLMs + imagem, HTTP/2) + model_router.py
 ├── models/          # brand, brief, generation, pipeline_log, generated_image, prompt_template
 ├── schemas/         # Pydantic v2 schemas
-├── routers/         # brands, briefs, generations, gallery, websocket
+├── routers/         # brands, briefs, generations, gallery, websocket, config
 ├── services/        # brand_service, brief_service, storage_service, brand_discovery
 ├── prompts/         # Templates por tipo de arte (10 tipos)
+├── migrations/      # SQL migrations (001, 002...)
 └── tasks/           # Celery tasks (engine próprio por task)
 
 frontend/src/
 ├── pages/           # Painel, Nova Arte, Galeria, Detalhe da Geração, Gestão de Marcas
-├── components/      # Layout (responsivo), StatusBadge, ScoreBadge, ModelBadge
+├── components/      # Layout, StatusBadge, ScoreBadge, ModelBadge, TextFieldsSection, CarouselEditor, InclusionUpload, FormatSelector, BatchProgress
+├── config/          # artTypeConfig.ts (mirror do backend, campos dinâmicos)
 ├── contexts/        # ThemeContext (dark/light mode)
 ├── api/             # Axios client + WebSocket + storageUrl helper
-└── types/           # TypeScript types (ArtType, Platform, GenerationStatus)
+└── types/           # TypeScript types (ArtType, Platform, GenerationStatus, SlideData, BatchInfo)
 ```
 
 ## Deploy
@@ -107,9 +118,11 @@ frontend/src/
 - Frontend: TypeScript, Tailwind, tudo em Português Brasileiro
 - Frontend: TODAS as cores via CSS variables (var(--bg-primary), var(--text-primary), etc.) — NUNCA hardcoded hex
 - Frontend: "Nova Arte" (não "Novo Brief"), "Artisan" (não "Designer Agent")
-- Frontend: fluxo progressivo ordem — Marca → Tipo → Descrição → Textos → Gerar (descrição antes de textos para IA sugerir melhor)
+- Frontend: fluxo progressivo ordem — Marca → Tipo → Descrição → Inclusões → Textos/Slides → Formato → Gerar
+- Frontend: formulário dinâmico — campos de texto, inclusão e formatos determinados por artTypeConfig
 - Frontend: Pipeline mostra nomes dos agentes (Creative Director, não "Etapa 1"), duração como "1min 18s" (não "78.1s")
 - Frontend: NÃO duplicar informação — sidebar de detalhes não repete logs do Pipeline
+- Art Type Config: toda mudança de campos/formatos por tipo de arte deve ser feita em `art_type_config.py` (backend) e `artTypeConfig.ts` (frontend) — são mirrors
 - API: REST, prefixo `/api/`
 - Agentes: NÃO usar `response_format={"type": "json_object"}` — fazer strip de markdown code blocks antes de json.loads()
 - Celery tasks: criar engine asyncpg NOVO por task (nunca usar o global do FastAPI)
@@ -135,8 +148,12 @@ frontend/src/
 - Gerações travadas: usar `POST /api/generations/{id}/mark-failed` (só running/pending), depois retry
 - Retry só funciona para status failed/completed (evitar race condition com tasks paralelas)
 - Frontend download cross-origin: precisa endpoint dedicado (atributo `download` do `<a>` não funciona entre portas)
-- PipelineContext.from_dict filtra campos desconhecidos para compatibilidade futura
+- PipelineContext.from_dict filtra campos desconhecidos em TODOS os nested dataclasses para compatibilidade futura
 - Orchestrator + task cada um cria engine asyncpg próprio (2 engines por pipeline run)
+- Batch: Creative Director roda 1x no router antes de despachar tasks; resultado em `shared_creative_direction`
+- Carrossel: cada slide vira uma geração separada (× formatos), com `current_slide_index` e `total_slides` no contexto
+- Inclusões vs Referências: `inclusion_urls` separado de `reference_urls`; prompt diz "MUST appear" para inclusões
+- suggest-texts aceita body JSON (não query params) — descrições longas não truncam
 - Swagger/docs desabilitado em produção (DEBUG=false) — habilitar com `DEBUG=true`
 - Auth middleware opt-in: sem `API_SECRET_KEY` configurada = sem auth (modo dev)
 - Request body limit global: 15MB (middleware)
