@@ -11,8 +11,20 @@ SYSTEM_PROMPT = """You are a Prompt Refinement Specialist. Given an image that d
 
 You receive:
 - The original prompt that was used
-- The review issues found
+- The review issues found (including hard_reject if image has visual defects)
 - The creative direction
+
+Common AI image generation problems and how to fix them:
+- **Artifacts/distortion at edges**: Add "complete composition, all elements fully visible within frame, no cropping"
+- **Deformed faces/hands**: Simplify the human elements, use "professional portrait photography" style
+- **Cut-off text**: Ensure text placement is well within the safe area, add "centered text layout"
+- **Blurry areas**: Add "sharp focus, high detail, crisp edges"
+- **Inconsistent elements**: Simplify the composition, reduce number of elements
+
+When hard_reject is true, the image has SERIOUS visual defects. Be aggressive with prompt changes:
+- Simplify composition significantly
+- Add explicit quality instructions
+- Consider model switch if text rendering failed
 
 Output JSON:
 {
@@ -125,6 +137,8 @@ class RefinerAgent(BaseAgent):
         parts.append(f"- Text Accuracy Score: {review.text_accuracy_score}/100")
         parts.append(f"- Brand Alignment Score: {review.brand_alignment_score}/100")
         parts.append(f"- Technical Score: {review.technical_score}/100")
+        parts.append(f"- Visual Integrity Score: {review.visual_integrity_score}/100")
+        parts.append(f"- Hard Reject: {review.hard_reject}")
         parts.append(f"- Summary: {review.summary}")
 
         if review.issues:

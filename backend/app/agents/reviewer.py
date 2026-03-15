@@ -10,13 +10,30 @@ from app.agents.context import PipelineContext, QualityReview
 from app.config import get_settings
 
 
-SYSTEM_PROMPT = """You are an expert Art Director reviewing AI-generated images. Evaluate the image against the original brief and brand guidelines.
+SYSTEM_PROMPT = """You are an expert Art Director reviewing AI-generated images for a professional design platform. You must be STRICT — clients pay for these images. A flawed image damages credibility.
 
 Score each dimension 0-100:
-1. composition_score: Visual balance, hierarchy, spacing, rule of thirds
-2. text_accuracy_score: Text correctness and legibility (100 if no text required)
-3. brand_alignment_score: Color accuracy, tone consistency, brand rules followed
-4. technical_score: Resolution quality, no artifacts, clean edges
+
+1. composition_score: Visual balance, hierarchy, spacing, rule of thirds, elements properly placed within frame
+2. text_accuracy_score: Text correctness, legibility, no misspellings, proper alignment (100 if no text required)
+3. brand_alignment_score: Color accuracy, tone consistency, brand rules followed, logo correctly rendered
+4. technical_score: THIS IS CRITICAL. Score HARSHLY for:
+   - Visual artifacts, distortion, or glitches ANYWHERE in the image (score 0-30)
+   - Cut-off, cropped, or incomplete elements at edges (score 0-30)
+   - Blurry or smudged areas (score 0-40)
+   - Deformed hands, faces, or objects (score 0-20)
+   - Inconsistent lighting or shadows (score 0-50)
+   - Any area that looks "broken", "melted", or unfinished (score 0-20)
+   If ANY of these defects exist, technical_score MUST be below 50.
+5. visual_integrity_score: Overall professional quality — would you show this to a paying client?
+   - If any part of the image looks AI-generated in a bad way, score below 60
+   - If the image has ANY noticeable defect, score below 50
+
+IMPORTANT: Be especially vigilant about:
+- Bottom and edge areas of the image (AI models often produce artifacts there)
+- Transitions between elements (blending issues)
+- Text that is slightly wrong or has extra/missing characters
+- Faces or body parts that look unnatural
 
 Output JSON:
 {
@@ -24,9 +41,19 @@ Output JSON:
     "text_accuracy_score": 0-100,
     "brand_alignment_score": 0-100,
     "technical_score": 0-100,
-    "issues": [{"type": "composition|text|brand|technical", "description": "what's wrong", "severity": "critical|major|minor"}],
-    "summary": "brief overall assessment"
+    "visual_integrity_score": 0-100,
+    "issues": [{"type": "composition|text|brand|technical|integrity", "description": "what's wrong", "severity": "critical|major|minor"}],
+    "summary": "brief overall assessment",
+    "hard_reject": false
 }
+
+Set "hard_reject": true if ANY of these conditions are met:
+- Visible artifacts, distortion, or glitches
+- Cut-off or incomplete elements
+- Deformed faces or body parts
+- Image looks unfinished or broken in any area
+
+A hard_reject means the image CANNOT be sent to a client regardless of other scores.
 
 Always output valid JSON only, no markdown."""
 
@@ -76,15 +103,23 @@ class ReviewerAgent(BaseAgent):
         text_accuracy_score = int(review_data["text_accuracy_score"])
         brand_alignment_score = int(review_data["brand_alignment_score"])
         technical_score = int(review_data["technical_score"])
+        visual_integrity_score = int(review_data.get("visual_integrity_score", technical_score))
+        hard_reject = review_data.get("hard_reject", False)
 
         overall_score = int(
-            composition_score * 0.25
-            + text_accuracy_score * 0.30
-            + brand_alignment_score * 0.25
+            composition_score * 0.20
+            + text_accuracy_score * 0.25
+            + brand_alignment_score * 0.20
             + technical_score * 0.20
+            + visual_integrity_score * 0.15
         )
 
-        approved = overall_score >= settings.QUALITY_THRESHOLD
+        # Hard reject overrides score — artifacts, distortion, etc. are never acceptable
+        if hard_reject:
+            approved = False
+            overall_score = min(overall_score, 40)
+        else:
+            approved = overall_score >= settings.QUALITY_THRESHOLD
 
         context.review = QualityReview(
             overall_score=overall_score,

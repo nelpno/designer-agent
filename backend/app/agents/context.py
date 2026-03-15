@@ -76,6 +76,8 @@ class QualityReview:
     text_accuracy_score: int
     brand_alignment_score: int
     technical_score: int
+    visual_integrity_score: int = 100
+    hard_reject: bool = False
     issues: list[dict[str, str]] = field(default_factory=list)  # [{type, description, severity}]
     approved: bool = False
     summary: str = ""
