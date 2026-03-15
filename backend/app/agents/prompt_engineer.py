@@ -204,6 +204,8 @@ Guidelines:
             if has_refs:
                 parts.append(f"- {len(brief.reference_urls)} reference image(s) uploaded by the user will be sent alongside your prompt")
                 parts.append("- Your prompt should instruct the model to use these references as visual inspiration for style, layout, or product appearance")
+                parts.append("- Reference images have been provided. Pay close attention to their LAYOUT, COMPOSITION, and VISUAL STRUCTURE. The generated image should follow a similar arrangement of elements, spacing, and visual hierarchy as shown in the reference images.")
+                parts.append("- Describe the composition in your prompt to mirror the reference layout: element positioning, proportions, negative space usage, and overall visual flow")
             if has_logo:
                 parts.append("- The brand logo will be sent as a reference image")
                 parts.append("- Your prompt should instruct the model to incorporate the logo naturally in the design")

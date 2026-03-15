@@ -328,6 +328,17 @@ export default function GenerationDetail() {
   const promptUsed = finalImage?.prompt_used ?? null
   const negativePromptUsed = finalImage?.negative_prompt ?? null
 
+  // Batch sibling navigation
+  const batchIndex = batchGenerations.findIndex((g) => g.id === id)
+  const batchTotal = batchGenerations.length
+  const hasBatchNav = batchTotal > 1 && batchIndex >= 0
+  const prevBatchGen = hasBatchNav && batchIndex > 0 ? batchGenerations[batchIndex - 1] : null
+  const nextBatchGen = hasBatchNav && batchIndex < batchTotal - 1 ? batchGenerations[batchIndex + 1] : null
+
+  function navigateToBatchSibling(genId: string) {
+    navigate(`/generation/${genId}`)
+  }
+
   return (
     <div className="p-6 lg:p-8 max-w-[1400px] mx-auto">
       {/* Header */}
@@ -442,7 +453,7 @@ export default function GenerationDetail() {
           <div className="flex-[3] space-y-4 animate-slide-up">
             {/* Main image */}
             <div
-              className="overflow-hidden rounded-2xl"
+              className="overflow-hidden rounded-2xl group"
               style={{
                 border: '1px solid var(--border)',
                 background: 'var(--bg-secondary)',
@@ -498,6 +509,68 @@ export default function GenerationDetail() {
                   <div className="absolute top-3 left-3">
                     <StatusBadge status={generation.status} />
                   </div>
+                )}
+
+                {/* Batch navigation arrows */}
+                {hasBatchNav && (
+                  <>
+                    {/* Previous arrow */}
+                    {prevBatchGen && (
+                      <button
+                        type="button"
+                        onClick={() => navigateToBatchSibling(prevBatchGen.id)}
+                        className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full flex items-center justify-center transition-all opacity-0 hover:opacity-100 group-hover:opacity-70"
+                        style={{
+                          background: 'rgba(0, 0, 0, 0.5)',
+                          backdropFilter: 'blur(8px)',
+                          border: '1px solid rgba(255, 255, 255, 0.15)',
+                          color: '#fff',
+                        }}
+                        title={prevBatchGen.format_label || 'Anterior'}
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                        </svg>
+                      </button>
+                    )}
+
+                    {/* Next arrow */}
+                    {nextBatchGen && (
+                      <button
+                        type="button"
+                        onClick={() => navigateToBatchSibling(nextBatchGen.id)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full flex items-center justify-center transition-all opacity-0 hover:opacity-100 group-hover:opacity-70"
+                        style={{
+                          background: 'rgba(0, 0, 0, 0.5)',
+                          backdropFilter: 'blur(8px)',
+                          border: '1px solid rgba(255, 255, 255, 0.15)',
+                          color: '#fff',
+                        }}
+                        title={nextBatchGen.format_label || 'Próximo'}
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </button>
+                    )}
+
+                    {/* Position indicator */}
+                    <div
+                      className="absolute bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-xs font-medium"
+                      style={{
+                        background: 'rgba(0, 0, 0, 0.5)',
+                        backdropFilter: 'blur(8px)',
+                        border: '1px solid rgba(255, 255, 255, 0.15)',
+                        color: '#fff',
+                        fontFamily: 'var(--font-heading)',
+                      }}
+                    >
+                      {batchIndex + 1}/{batchTotal}
+                      {generation.format_label && (
+                        <span style={{ opacity: 0.7 }}> · {generation.format_label}</span>
+                      )}
+                    </div>
+                  </>
                 )}
               </div>
             </div>
@@ -645,6 +718,8 @@ export default function GenerationDetail() {
               <BatchProgress
                 batchId={generation.batch_id}
                 generations={batchGenerations}
+                currentGenerationId={id}
+                onNavigate={navigateToBatchSibling}
               />
             )}
 
