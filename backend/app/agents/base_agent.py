@@ -10,7 +10,7 @@ class BaseAgent(ABC):
 
     name: str = "base_agent"
 
-    def __init__(self, client: OpenRouterClient):
+    def __init__(self, client: OpenRouterClient | None = None):
         self.client = client
 
     async def run(self, context: PipelineContext) -> PipelineContext:
