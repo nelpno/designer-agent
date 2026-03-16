@@ -10,8 +10,10 @@ from app.agents.context import PipelineContext, CreativeDirection
 from app.agents.creative_director import CreativeDirectorAgent
 from app.agents.prompt_engineer import PromptEngineerAgent
 from app.agents.generator import GeneratorAgent
+from app.agents.compositor import CompositorAgent
 from app.agents.reviewer import ReviewerAgent
 from app.agents.refiner import RefinerAgent
+from app.config.art_type_config import get_art_type_config
 from app.models.generation import PipelineLog, Generation
 from app.providers.openrouter_client import OpenRouterClient
 from app.config import get_settings
@@ -45,6 +47,19 @@ async def _save_agent_log(
         logger.warning(f"Failed to persist pipeline log for {agent_name}: {e}")
 
 
+def _should_run_compositor(context: PipelineContext) -> bool:
+    """Check if the Compositor should run for this generation."""
+    art_type_config = get_art_type_config(context.brief.art_type)
+    if not art_type_config or not art_type_config.get("programmaticComposition", False):
+        return False
+    cd = context.creative_direction
+    if not cd or not getattr(cd, "composition_layout", None):
+        return False
+    if not cd.composition_layout.use_compositor:
+        return False
+    return True
+
+
 async def run_pipeline(context: PipelineContext) -> PipelineContext:
     """Run the full 5-agent pipeline with review loop."""
     settings = get_settings()
@@ -64,8 +79,8 @@ async def run_pipeline(context: PipelineContext) -> PipelineContext:
         if context.shared_creative_direction:
             # Reuse shared Creative Director results from batch
             logger.info(f"[{context.brief_id}] Reusing shared Creative Director results...")
-            context.creative_direction = CreativeDirection(
-                **context.shared_creative_direction["creative_direction"]
+            context.creative_direction = CreativeDirection.from_dict(
+                context.shared_creative_direction["creative_direction"]
             )
             context.enhanced_description = context.shared_creative_direction.get(
                 "enhanced_description"
@@ -120,6 +135,18 @@ async def run_pipeline(context: PipelineContext) -> PipelineContext:
                     iteration, log_entry.decision, log_entry.reasoning,
                 )
             log_count_before = len(context.decision_log)
+
+            # Step 3.5: Compositor (programmatic text/logo overlay)
+            if _should_run_compositor(context):
+                compositor = CompositorAgent()
+                context = await compositor.run(context)
+
+                for log_entry in context.decision_log[log_count_before:]:
+                    await _save_agent_log(
+                        SessionLocal, generation_id, log_entry.agent_name,
+                        iteration, log_entry.decision, log_entry.reasoning,
+                    )
+                log_count_before = len(context.decision_log)
 
             # Step 4: Reviewer
             reviewer = ReviewerAgent(client)
