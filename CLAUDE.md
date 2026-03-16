@@ -1,6 +1,6 @@
 # Artisan
 
-## Status: Em produção (v1.4) — 48 commits
+## Status: Em produção (v1.5) — 49 commits
 
 ## URLs
 - **Frontend**: http://82.29.60.220:8086 (direto)
@@ -24,8 +24,8 @@ Plataforma interna de geração de artes estáticas com IA chamada **Artisan**. 
 - **Imagens**: servidas via FastAPI StaticFiles em `/storage/`
 
 ## Modelos via OpenRouter
-- **LLMs (agentes pensantes)**: `anthropic/claude-sonnet-4` (Prompt Engineer, Reviewer, Refiner)
-- **LLM rápido**: `anthropic/claude-haiku-4.5` (Creative Director — tarefa mais simples)
+- **LLMs (agentes pensantes)**: `anthropic/claude-sonnet-4` (Creative Director, Prompt Engineer, Reviewer, Refiner)
+- **LLM rápido**: `anthropic/claude-haiku-4.5` (disponível mas não mais usado por agentes)
 - **Imagem (texto/logo)**: `google/gemini-3-pro-image-preview` (Nano Banana Pro)
 - **Imagem (rápido)**: `google/gemini-3.1-flash-image-preview` (Nano Banana 2)
 - **Imagem (fotorrealismo)**: `black-forest-labs/flux.2-pro` (FLUX.2 Pro)
@@ -71,6 +71,19 @@ Plataforma interna de geração de artes estáticas com IA chamada **Artisan**. 
 - **Batch Viewer**: setas ← → para navegar entre imagens do batch, indicador de posição, badges clicáveis
 - **Referências com Peso no Layout**: Prompt Engineer dá mais peso à composição/layout das referências visuais
 - **Config API**: `GET /api/config/art-types` expõe config para API futura do planejador
+- **Anchor Image**: batch gera 1ª imagem primeiro, usa como referência visual para as demais (two-phase dispatch)
+- **Visual Template**: template visual compartilhado no batch para coerência de estilo
+- **PE com Visão**: Prompt Engineer analisa referências via vision antes de escrever prompt
+- **Refiner com Visão**: Refiner vê a imagem gerada para correções mais precisas
+- **Score Breakdown**: 6 dimensões de score (composição, texto, marca, técnico, integridade, summary) persistidas
+- **Retry com Edição**: `POST /api/generations/{id}/retry-edit` — regenera com descrição modificada
+- **Download Batch ZIP**: `GET /api/generations/batch/{id}/download` — todas imagens do batch
+- **Gallery Filtros Server-side**: status, art_type, search por descrição
+- **Sugestão Per-slide**: sugere texto para 1 slide específico do carrossel (com contexto dos demais)
+- **Auto-save Drafts**: formulário salva rascunho em localStorage (`artisan-draft-brief`)
+- **Batch Overview Modal**: modal na gallery com grid de todas imagens do batch
+- **Score Breakdown Visual**: componente com barras por dimensão de score
+- **Retry Per-item no Batch**: botão de retry individual em itens falhados do batch
 
 ## Design System — Artisan
 - **Nome**: Artisan (logo ❖ com gradiente verde→ciano)
@@ -101,7 +114,7 @@ backend/app/
 
 frontend/src/
 ├── pages/           # Painel, Nova Arte, Galeria, Detalhe da Geração, Gestão de Marcas
-├── components/      # Layout, StatusBadge, ScoreBadge, ModelBadge, TextFieldsSection, CarouselEditor, InclusionUpload, FormatSelector, BatchProgress
+├── components/      # Layout, StatusBadge, ScoreBadge, ModelBadge, TextFieldsSection, CarouselEditor, InclusionUpload, FormatSelector, BatchProgress, ScoreBreakdown, BatchOverviewModal
 ├── config/          # artTypeConfig.ts (mirror do backend, campos dinâmicos)
 ├── contexts/        # ThemeContext (dark/light mode)
 ├── api/             # Axios client + WebSocket + storageUrl helper
@@ -138,6 +151,8 @@ frontend/src/
 - Brand discovery retorna dados em `{"discovered": {...}}` — frontend acessa `.discovered`
 - Logo da marca pode ser `data:image/png;base64,...` (data URL) ou path no storage
 - Orchestrator `_save_agent_log` é non-fatal (try/except) para não matar pipeline por falha de DB
+- Agentes com visão (PE, Reviewer, Refiner): carregar imagem com `os.path.realpath` + `startswith` guard, `asyncio.to_thread` para I/O, fallback para text-only se imagem falhar
+- Creative Director: usa `LLM_MODEL` (Sonnet), NÃO `LLM_MODEL_FAST` — é a decisão criativa mais importante do pipeline
 - OpenRouter model IDs: usar formato OpenRouter (`anthropic/claude-haiku-4.5`), NÃO formato API direta (`claude-haiku-4-5-20251001`)
 
 ## Gotchas
@@ -168,6 +183,14 @@ frontend/src/
 - Redis e PostgreSQL NÃO expõem portas no host (só rede Docker interna)
 - WebSocket e polling NÃO rodam simultaneamente — polling só ativa se WS desconectado
 - Botões em forms: SEMPRE usar `type="button"` se não for submit (evitar double submit)
+- Two-phase batch: router aguarda 1ª geração (polling DB, timeout 120s) antes de despachar as demais com anchor_image_url
+- Anchor image: `anchor_image_url` no PipelineContext é path relativo ao storage (não URL completa)
+- PE/Refiner vision: usam `chat_with_vision()` — fallback para `chat()` se imagem não carregar
+- Score breakdown: migration 005 necessária (`ALTER TABLE generations ADD COLUMN IF NOT EXISTS ...`)
+- Auto-save frontend: key `artisan-draft-brief` no localStorage; limpar após submit
+- `retry-edit` limpa `shared_creative_direction` e `enhanced_description` do context para forçar re-run do CD
+- Gallery search: busca no `pipeline_context` inteiro via cast(String).ilike — não é field-specific
+- Carousel maxQuantity=2: permite 2 variações de carrossel por brief
 
 ## Credenciais (NÃO committar)
 - OpenRouter API Key: nas env vars da stack Portainer (NUNCA no .env.example ou código)
