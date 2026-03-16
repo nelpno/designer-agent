@@ -46,6 +46,17 @@ Note: suggested_model_type is only required when suggest_model_switch is true.
 Always output valid JSON only, no markdown."""
 
 
+COMPOSITION_REFINER_ADDENDUM = """
+
+IMPORTANT: Text and logo are overlaid PROGRAMMATICALLY after image generation.
+If the review indicates legibility problems (text hard to read, busy background behind text):
+- Your strategy should focus on adjusting the IMAGE prompt to create cleaner, simpler areas
+  where text will be placed
+- Request more negative space, calmer backgrounds, or darker/lighter zones as needed
+- You CANNOT adjust text positioning or style — only the background image prompt
+"""
+
+
 class RefinerAgent(BaseAgent):
     name = "refiner"
 
@@ -60,8 +71,14 @@ class RefinerAgent(BaseAgent):
 
         user_prompt = self._build_user_prompt(context)
 
+        # Local copy of system prompt — conditionally append composition addendum
+        system_prompt = SYSTEM_PROMPT
+        composition_layout = getattr(context.creative_direction, "composition_layout", None)
+        if composition_layout and composition_layout.use_compositor:
+            system_prompt += COMPOSITION_REFINER_ADDENDUM
+
         messages = [
-            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
         ]
 
