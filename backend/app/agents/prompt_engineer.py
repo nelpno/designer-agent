@@ -31,9 +31,8 @@ class PromptEngineerAgent(BaseAgent):
         art_type = creative_direction.selected_art_type
         has_significant_text = creative_direction.has_significant_text
 
-        # Check if compositor is active
-        composition_layout = getattr(creative_direction, "composition_layout", None)
-        use_compositor = composition_layout and composition_layout.use_compositor
+        # DISABLED: compositor produces poor results with current models
+        use_compositor = False
 
         # Select model and format config
         selected_model = select_model(art_type, has_significant_text)

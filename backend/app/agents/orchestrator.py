@@ -48,16 +48,12 @@ async def _save_agent_log(
 
 
 def _should_run_compositor(context: PipelineContext) -> bool:
-    """Check if the Compositor should run for this generation."""
-    art_type_config = get_art_type_config(context.brief.art_type)
-    if not art_type_config or not art_type_config.get("programmaticComposition", False):
-        return False
-    cd = context.creative_direction
-    if not cd or not getattr(cd, "composition_layout", None):
-        return False
-    if not cd.composition_layout.use_compositor:
-        return False
-    return True
+    """Check if the Compositor should run for this generation.
+    DISABLED: v2.0 compositor produces poor results with current models.
+    AI models ignore 'no text' instructions, causing double text/logo.
+    Re-enable when model cooperation improves or post-processing approach changes.
+    """
+    return False
 
 
 async def run_pipeline(context: PipelineContext) -> PipelineContext:

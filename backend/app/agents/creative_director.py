@@ -109,7 +109,8 @@ Guidelines:
         # Check if this art type uses programmatic composition
         from app.config.art_type_config import get_art_type_config
         art_type_config = get_art_type_config(context.brief.art_type)
-        use_composition = art_type_config and art_type_config.get("programmaticComposition", False)
+        # DISABLED: compositor produces poor results with current models
+        use_composition = False  # art_type_config and art_type_config.get("programmaticComposition", False)
         if use_composition:
             system_prompt += COMPOSITION_PROMPT_ADDENDUM
 
