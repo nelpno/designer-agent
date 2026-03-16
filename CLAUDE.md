@@ -1,6 +1,6 @@
 # Artisan
 
-## Status: Em produção (v1.5) — 49 commits
+## Status: Em produção (v2.0) — 68 commits
 
 ## URLs
 - **Frontend**: http://82.29.60.220:8086 (direto)
@@ -84,6 +84,9 @@ Plataforma interna de geração de artes estáticas com IA chamada **Artisan**. 
 - **Batch Overview Modal**: modal na gallery com grid de todas imagens do batch
 - **Score Breakdown Visual**: componente com barras por dimensão de score
 - **Retry Per-item no Batch**: botão de retry individual em itens falhados do batch
+- **Compositor (DESATIVADO)**: agente Pillow para overlay programático de texto/logo — desativado porque modelos ignoram instrução "no text"
+- **Fontes TTF**: Sora + DM Sans em `backend/assets/fonts/` (7 pesos) para uso futuro do Compositor
+- **programmaticComposition config**: flag por art type em art_type_config (True para ad/social/carousel/presentation/brand, False para resto)
 
 ## Design System — Artisan
 - **Nome**: Artisan (logo ❖ com gradiente verde→ciano)
@@ -99,7 +102,7 @@ Plataforma interna de geração de artes estáticas com IA chamada **Artisan**. 
 ## Estrutura
 ```
 backend/app/
-├── agents/          # creative_director, prompt_engineer, generator, reviewer, refiner
+├── agents/          # creative_director, prompt_engineer, generator, compositor (DISABLED), reviewer, refiner
 │   ├── orchestrator.py   # Pipeline controller com loop de qualidade
 │   └── context.py        # PipelineContext compartilhado entre agentes
 ├── config/          # Settings + art_type_config.py (campos dinâmicos por art type)
@@ -154,6 +157,7 @@ frontend/src/
 - Agentes com visão (PE, Reviewer, Refiner): carregar imagem com `os.path.realpath` + `startswith` guard, `asyncio.to_thread` para I/O, fallback para text-only se imagem falhar
 - Creative Director: usa `LLM_MODEL` (Sonnet), NÃO `LLM_MODEL_FAST` — é a decisão criativa mais importante do pipeline
 - OpenRouter model IDs: usar formato OpenRouter (`anthropic/claude-haiku-4.5`), NÃO formato API direta (`claude-haiku-4-5-20251001`)
+- CreativeDirection: usar `CreativeDirection.from_dict()` (não `**dict`) para reconstrução — lida com nested CompositionLayout
 
 ## Gotchas
 - Traefik redireciona HTTP→HTTPS globalmente. Cloudflare SSL deve estar em "Full"
@@ -191,6 +195,11 @@ frontend/src/
 - `retry-edit` limpa `shared_creative_direction` e `enhanced_description` do context para forçar re-run do CD
 - Gallery search: busca no `pipeline_context` inteiro via cast(String).ilike — não é field-specific
 - Carousel maxQuantity=2: permite 2 variações de carrossel por brief
+- AsyncSession: `session.expire_all()` é SÍNCRONO — NUNCA usar `await`. Usar `execution_options(populate_existing=True)` na query para refresh
+- Dataclasses de output LLM: SEMPRE dar defaults e filtrar campos desconhecidos (`{k:v for k,v in d.items() if k in valid_fields}`) — LLMs adicionam campos extras
+- Variáveis de `execute()` não existem em métodos privados da mesma classe — passar como parâmetro ou re-derivar de context
+- Modelos de imagem (Gemini, FLUX) ignoram instruções "não gere texto" — composição programática de texto sobre imagem gerada por IA não funciona com abordagem de zonas reservadas
+- Docker containers mudam de ID após restart — consultar container ID fresco via Portainer API antes de ler logs
 
 ## Credenciais (NÃO committar)
 - OpenRouter API Key: nas env vars da stack Portainer (NUNCA no .env.example ou código)
