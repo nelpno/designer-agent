@@ -43,6 +43,30 @@ export interface BatchInfo {
   completed: number
 }
 
+// Composition layout (Compositor Agent)
+
+export interface TextZone {
+  field: string;
+  region: 'top' | 'center' | 'bottom';
+  alignment: 'left' | 'center' | 'right';
+  size_hint: 'large' | 'medium' | 'small';
+  style: 'bold' | 'semibold' | 'medium' | 'regular' | 'light';
+  color_hint: 'light' | 'dark' | 'auto';
+}
+
+export interface LogoPlacement {
+  position: string;
+  size: 'small' | 'medium' | 'large';
+  opacity: number;
+}
+
+export interface CompositionLayout {
+  use_compositor: boolean;
+  text_zones: TextZone[];
+  logo_placement: LogoPlacement | null;
+  reserved_areas: string[];
+}
+
 // Score breakdown
 
 export interface ScoreBreakdownData {
