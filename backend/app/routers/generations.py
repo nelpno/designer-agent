@@ -180,7 +180,7 @@ async def _wait_for_anchor_image(
     while _asyncio.get_event_loop().time() < deadline:
         await _asyncio.sleep(2)
         # Expire cached state so next query gets fresh data
-        await session.expire_all()
+        session.expire_all()
         result = await session.execute(
             select(Generation).where(Generation.id == generation_id)
         )
