@@ -20,6 +20,7 @@ export type { SlideData } from '../types'
 export interface ArtTypeConfig {
   key: string
   label: string
+  programmaticComposition: boolean
   textFields: FieldConfig[]
   inclusion: 'none' | 'optional' | 'required'
   inclusionLabel?: string
@@ -35,6 +36,7 @@ export const ART_TYPE_CONFIGS: Record<string, ArtTypeConfig> = {
   ad_creative: {
     key: 'ad_creative',
     label: 'Criativo para Ads',
+    programmaticComposition: true,
     textFields: [
       {
         field: 'headline',
@@ -68,6 +70,7 @@ export const ART_TYPE_CONFIGS: Record<string, ArtTypeConfig> = {
   social_post: {
     key: 'social_post',
     label: 'Post Social',
+    programmaticComposition: true,
     textFields: [
       {
         field: 'headline',
@@ -94,6 +97,7 @@ export const ART_TYPE_CONFIGS: Record<string, ArtTypeConfig> = {
   carousel: {
     key: 'carousel',
     label: 'Carrossel',
+    programmaticComposition: true,
     textFields: [
       {
         field: 'slides',
@@ -114,6 +118,7 @@ export const ART_TYPE_CONFIGS: Record<string, ArtTypeConfig> = {
   logo: {
     key: 'logo',
     label: 'Logo',
+    programmaticComposition: false,
     textFields: [
       {
         field: 'headline',
@@ -132,6 +137,7 @@ export const ART_TYPE_CONFIGS: Record<string, ArtTypeConfig> = {
   product_shot: {
     key: 'product_shot',
     label: 'Foto de Produto',
+    programmaticComposition: false,
     textFields: [],
     inclusion: 'required',
     inclusionLabel: 'Foto do produto (obrigatório)',
@@ -143,6 +149,7 @@ export const ART_TYPE_CONFIGS: Record<string, ArtTypeConfig> = {
   lifestyle_photo: {
     key: 'lifestyle_photo',
     label: 'Foto Lifestyle',
+    programmaticComposition: false,
     textFields: [],
     inclusion: 'optional',
     inclusionLabel: 'Foto da pessoa ou produto',
@@ -154,6 +161,7 @@ export const ART_TYPE_CONFIGS: Record<string, ArtTypeConfig> = {
   mockup: {
     key: 'mockup',
     label: 'Mockup',
+    programmaticComposition: false,
     textFields: [],
     inclusion: 'required',
     inclusionLabel: 'Arte para aplicar no mockup (obrigatório)',
@@ -165,6 +173,7 @@ export const ART_TYPE_CONFIGS: Record<string, ArtTypeConfig> = {
   illustration: {
     key: 'illustration',
     label: 'Ilustração',
+    programmaticComposition: false,
     textFields: [],
     inclusion: 'none',
     allowedFormats: ['1:1', '16:9'],
@@ -175,6 +184,7 @@ export const ART_TYPE_CONFIGS: Record<string, ArtTypeConfig> = {
   presentation_slide: {
     key: 'presentation_slide',
     label: 'Slide',
+    programmaticComposition: true,
     textFields: [
       {
         field: 'headline',
@@ -200,6 +210,7 @@ export const ART_TYPE_CONFIGS: Record<string, ArtTypeConfig> = {
   brand_material: {
     key: 'brand_material',
     label: 'Material de Marca',
+    programmaticComposition: true,
     textFields: [
       {
         field: 'headline',

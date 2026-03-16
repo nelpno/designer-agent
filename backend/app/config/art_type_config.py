@@ -13,6 +13,7 @@ from typing import Any
 ART_TYPE_CONFIG: dict[str, dict[str, Any]] = {
     "ad_creative": {
         "label": "Criativo para Ads",
+        "programmaticComposition": True,
         "textFields": [
             {
                 "field": "headline",
@@ -45,6 +46,7 @@ ART_TYPE_CONFIG: dict[str, dict[str, Any]] = {
     },
     "social_post": {
         "label": "Post Social",
+        "programmaticComposition": True,
         "textFields": [
             {
                 "field": "headline",
@@ -70,6 +72,7 @@ ART_TYPE_CONFIG: dict[str, dict[str, Any]] = {
     },
     "carousel": {
         "label": "Carrossel",
+        "programmaticComposition": True,
         "textFields": [
             {
                 "field": "slides",
@@ -89,6 +92,7 @@ ART_TYPE_CONFIG: dict[str, dict[str, Any]] = {
     },
     "logo": {
         "label": "Logo",
+        "programmaticComposition": False,
         "textFields": [
             {
                 "field": "headline",
@@ -106,6 +110,7 @@ ART_TYPE_CONFIG: dict[str, dict[str, Any]] = {
     },
     "product_shot": {
         "label": "Foto de Produto",
+        "programmaticComposition": False,
         "textFields": [],
         "inclusion": "required",
         "inclusionLabel": "Foto do produto (obrigatório)",
@@ -116,6 +121,7 @@ ART_TYPE_CONFIG: dict[str, dict[str, Any]] = {
     },
     "lifestyle_photo": {
         "label": "Foto Lifestyle",
+        "programmaticComposition": False,
         "textFields": [],
         "inclusion": "optional",
         "inclusionLabel": "Foto da pessoa ou produto",
@@ -126,6 +132,7 @@ ART_TYPE_CONFIG: dict[str, dict[str, Any]] = {
     },
     "mockup": {
         "label": "Mockup",
+        "programmaticComposition": False,
         "textFields": [],
         "inclusion": "required",
         "inclusionLabel": "Arte para aplicar no mockup (obrigatório)",
@@ -136,6 +143,7 @@ ART_TYPE_CONFIG: dict[str, dict[str, Any]] = {
     },
     "illustration": {
         "label": "Ilustração",
+        "programmaticComposition": False,
         "textFields": [],
         "inclusion": "none",
         "allowedFormats": ["1:1", "16:9"],
@@ -145,6 +153,7 @@ ART_TYPE_CONFIG: dict[str, dict[str, Any]] = {
     },
     "presentation_slide": {
         "label": "Slide",
+        "programmaticComposition": True,
         "textFields": [
             {
                 "field": "headline",
@@ -169,6 +178,7 @@ ART_TYPE_CONFIG: dict[str, dict[str, Any]] = {
     },
     "brand_material": {
         "label": "Material de Marca",
+        "programmaticComposition": True,
         "textFields": [
             {
                 "field": "headline",
