@@ -229,7 +229,8 @@ Guidelines:
             if brand.dont_rules:
                 parts.append(f"- Don't: {', '.join(brand.dont_rules)}")
             # Only tell model to include logo if compositor is NOT handling it
-            if brand.logo_url and (not use_compositor or not composition_layout or not composition_layout.logo_placement):
+            cl = getattr(creative_direction, "composition_layout", None)
+            if brand.logo_url and (not use_compositor or not cl or not cl.logo_placement):
                 parts.append(f"- Logo: The brand has a logo. Include it naturally in the design (typically bottom corner or as a watermark).")
 
         # Reference images info
