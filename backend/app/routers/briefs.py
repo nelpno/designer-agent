@@ -38,6 +38,8 @@ class SuggestTextsRequest(BaseModel):
     platform: str | None = None
     description: str = ""
     slide_count: int = 0
+    slide_index: int | None = None  # suggest for specific slide only
+    existing_slides: list[dict] | None = None  # context of other slides
 
 
 @router.post("/suggest-texts")
@@ -65,7 +67,33 @@ async def suggest_texts(request: SuggestTextsRequest):
         config = get_art_type_config(art_type)
         text_field_names = get_text_fields(art_type) if config else ["headline", "body_text", "cta_text"]
 
-        if slide_count > 0:
+        if request.slide_index is not None and request.existing_slides:
+            # Per-slide suggestion mode
+            slide_num = request.slide_index + 1
+            context_lines = []
+            for i, s in enumerate(request.existing_slides, 1):
+                h = s.get("headline", "")
+                b = s.get("body_text", "")
+                if h or b:
+                    context_lines.append(f"Slide {i}: \"{h}\" — {b}")
+                else:
+                    context_lines.append(f"Slide {i}: (vazio)")
+
+            user_msg = (
+                f"Tipo: {art_type}. Descrição: {description}\n\n"
+                f"Este é um carrossel com {len(request.existing_slides)} slides. "
+                f"Os outros slides já escritos:\n" + "\n".join(context_lines) + "\n\n"
+                f"Gere o conteúdo APENAS para o Slide {slide_num}. "
+                f"Deve se encaixar no contexto narrativo dos demais slides.\n"
+                f'Retorne JSON: {{"slides": [{{"headline": "...", "body_text": "..."}}]}}'
+            )
+
+            system_prompt = """Você é um copywriter especialista em marketing digital.
+Gere o conteúdo para UM slide específico de um carrossel, considerando o contexto dos demais slides.
+Responda APENAS com JSON válido."""
+            user_prompt = user_msg
+
+        elif slide_count > 0:
             # Carousel mode — generate per-slide texts
             system_prompt = f"""Você é um copywriter especialista em marketing digital.
 Dado um tipo de arte e uma descrição, sugira textos criativos e persuasivos para um carrossel com {slide_count} slides.

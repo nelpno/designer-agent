@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { apiClient, storageUrl } from '../api/client'
 import { Generation, GenerationStatus } from '../types'
+import { ART_TYPE_CONFIGS } from '../config/artTypeConfig'
 import StatusBadge from '../components/StatusBadge'
 import ScoreBadge from '../components/ScoreBadge'
 import ModelBadge from '../components/ModelBadge'
+import BatchOverviewModal from '../components/BatchOverviewModal'
 
 const STATUS_FILTERS = [
   { label: 'Todos', value: '' },
@@ -131,7 +133,7 @@ function ImageCard({ generation }: { generation: Generation }) {
 }
 
 /** Group card for batch generations */
-function BatchCard({ batchId, generations }: { batchId: string; generations: Generation[] }) {
+function BatchCard({ batchId, generations, onViewAll }: { batchId: string; generations: Generation[]; onViewAll: () => void }) {
   const completed = generations.filter((g) => g.status === 'completed')
   const total = generations.length
 
@@ -152,6 +154,14 @@ function BatchCard({ batchId, generations }: { batchId: string; generations: Gen
             Lote · {completed.length}/{total}
           </span>
         </div>
+        <button
+          type="button"
+          onClick={onViewAll}
+          className="text-[11px] font-medium px-2 py-0.5 rounded-md transition-colors"
+          style={{ color: 'var(--accent-primary)' }}
+        >
+          Ver Tudo
+        </button>
       </div>
 
       {/* Horizontal scroll thumbnails */}
@@ -221,12 +231,31 @@ export default function Gallery() {
   const [error, setError] = useState<string | null>(null)
   const [statusFilter, setStatusFilter] = useState('')
   const [modelFilter, setModelFilter] = useState('')
+  const [artTypeFilter, setArtTypeFilter] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchInput, setSearchInput] = useState('')
+  const [batchModalData, setBatchModalData] = useState<{ batchId: string; generations: Generation[] } | null>(null)
 
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchQuery(searchInput)
+    }, 500)
+    return () => clearTimeout(timer)
+  }, [searchInput])
+
+  // Fetch with server-side filters
   useEffect(() => {
     async function fetchGenerations() {
       try {
         setLoading(true)
-        const res = await apiClient.get<Generation[]>('/api/generations?limit=50')
+        const params = new URLSearchParams()
+        if (statusFilter) params.set('status', statusFilter)
+        if (artTypeFilter) params.set('art_type', artTypeFilter)
+        if (modelFilter) params.set('model_used', modelFilter)
+        if (searchQuery) params.set('search', searchQuery)
+        params.set('limit', '50')
+        const res = await apiClient.get(`/api/gallery?${params.toString()}`)
         setGenerations(res.data)
       } catch (err) {
         setError('Falha ao carregar a galeria')
@@ -236,15 +265,11 @@ export default function Gallery() {
       }
     }
     fetchGenerations()
-  }, [])
+  }, [statusFilter, artTypeFilter, modelFilter, searchQuery])
 
   const availableModels = Array.from(new Set(generations.map((g) => g.model_used).filter(Boolean))) as string[]
 
-  const filtered = generations.filter((g) => {
-    if (statusFilter && g.status !== statusFilter) return false
-    if (modelFilter && g.model_used !== modelFilter) return false
-    return true
-  })
+  const filtered = generations
 
   // Group by batch_id — generations with batch_id are grouped, others are standalone
   type DisplayItem =
@@ -327,6 +352,44 @@ export default function Gallery() {
           ))}
         </div>
 
+        {/* Search input */}
+        <input
+          type="text"
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          placeholder="Buscar por descri\u00e7\u00e3o..."
+          className="px-3.5 py-2 rounded-xl text-sm focus:outline-none focus:ring-2 min-w-[180px]"
+          style={{
+            background: 'var(--bg-secondary)',
+            color: 'var(--text-primary)',
+            border: '1px solid var(--border)',
+          }}
+        />
+
+        {/* Art type filter dropdown */}
+        <div className="relative">
+          <select
+            value={artTypeFilter}
+            onChange={(e) => setArtTypeFilter(e.target.value)}
+            className="px-3.5 py-2 rounded-xl text-sm focus:outline-none focus:ring-2 appearance-none pr-8 cursor-pointer"
+            style={{
+              background: 'var(--bg-secondary)',
+              color: 'var(--text-secondary)',
+              border: '1px solid var(--border)',
+            }}
+          >
+            <option value="">Todos os tipos</option>
+            {Object.values(ART_TYPE_CONFIGS).map((cfg) => (
+              <option key={cfg.key} value={cfg.key}>{cfg.label}</option>
+            ))}
+          </select>
+          <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-tertiary)' }}>
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+        </div>
+
         {/* Model filter dropdown */}
         {availableModels.length > 0 && (
           <div className="relative">
@@ -354,7 +417,7 @@ export default function Gallery() {
         )}
 
         {/* Clear filters */}
-        {(statusFilter || modelFilter) && (
+        {(statusFilter || modelFilter || artTypeFilter || searchInput) && (
           <button
             onClick={() => { setStatusFilter(''); setModelFilter('') }}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs transition-all rounded-lg"

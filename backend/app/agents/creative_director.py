@@ -48,9 +48,9 @@ Guidelines:
             {"role": "user", "content": user_prompt},
         ]
 
-        # Use fast model for creative direction (structured task, Haiku is sufficient)
+        # Use best model for creative direction — most impactful creative decision in pipeline
         response = await self.client.chat(
-            model=settings.LLM_MODEL_FAST,
+            model=settings.LLM_MODEL,
             messages=messages,
             temperature=0.7,
             max_tokens=1024,
@@ -119,6 +119,17 @@ Guidelines:
                 parts.append(f"- Don't: {', '.join(brand.dont_rules)}")
             if brand.logo_url:
                 parts.append(f"- Logo: brand has a logo that should be referenced in the design")
+
+        # Carousel slides context
+        if brief.slides:
+            parts.append(f"\n## Carousel Content — {len(brief.slides)} Slides")
+            parts.append("- This is a carousel post. Consider the narrative arc across slides.")
+            parts.append("- Define a visual style that works for ALL slides as a cohesive set.")
+            parts.append("- Typography and layout must accommodate varying text lengths across slides.")
+            for i, slide in enumerate(brief.slides, 1):
+                headline = slide.get("headline", "")
+                body = slide.get("body_text", "")
+                parts.append(f"- Slide {i}: \"{headline}\" — {body}")
 
         return "\n".join(parts)
 

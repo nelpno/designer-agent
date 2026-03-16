@@ -1,4 +1,5 @@
 import type { Generation } from '../types'
+import { apiClient } from '../api/client'
 import StatusBadge from './StatusBadge'
 
 interface BatchProgressProps {
@@ -62,6 +63,25 @@ export default function BatchProgress({ batchId, generations, currentGenerationI
   const failed = generations.filter((g) => g.status === 'failed').length
   const progressPercent = total > 0 ? (completed / total) * 100 : 0
 
+  const handleDownloadAll = async () => {
+    if (!batchId) return
+    try {
+      const response = await apiClient.get(`/api/generations/batch/${batchId}/download`, {
+        responseType: 'blob'
+      })
+      const url = window.URL.createObjectURL(new Blob([response.data]))
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `batch-${batchId.slice(0, 8)}.zip`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      window.URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error('Download failed:', err)
+    }
+  }
+
   return (
     <div className="artisan-card-static p-5 rounded-2xl space-y-4">
       <div className="flex items-center gap-2">
@@ -83,11 +103,22 @@ export default function BatchProgress({ batchId, generations, currentGenerationI
           <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
             {completed}/{total} imagens geradas
           </span>
-          {failed > 0 && (
-            <span className="text-xs" style={{ color: 'var(--color-error)' }}>
-              {failed} com falha
-            </span>
-          )}
+          <div className="flex items-center gap-2">
+            {failed > 0 && (
+              <span className="text-xs" style={{ color: 'var(--color-error)' }}>
+                {failed} com falha
+              </span>
+            )}
+            {completed > 0 && (
+              <button
+                type="button"
+                className="btn-secondary text-xs"
+                onClick={handleDownloadAll}
+              >
+                Baixar Tudo
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Progress bar */}
@@ -134,6 +165,24 @@ export default function BatchProgress({ batchId, generations, currentGenerationI
               </div>
               <div className="flex items-center gap-2">
                 <StatusBadge status={gen.status} />
+                {gen.status === 'failed' && (
+                  <button
+                    type="button"
+                    className="btn-ghost text-xs"
+                    onClick={async (e) => {
+                      e.stopPropagation()
+                      try {
+                        await apiClient.post(`/api/generations/${gen.id}/retry`)
+                        window.location.reload()
+                      } catch (err) {
+                        console.error('Retry failed:', err)
+                      }
+                    }}
+                    title="Tentar novamente"
+                  >
+                    ↻
+                  </button>
+                )}
                 {isClickable && (
                   <svg className="w-3 h-3" style={{ color: 'var(--text-tertiary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />

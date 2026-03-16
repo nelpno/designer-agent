@@ -50,6 +50,12 @@ class GenerationResponse(BaseModel):
     pipeline_context: dict[str, Any] | None
     final_image_url: str | None
     final_score: int | None
+    composition_score: int | None = None
+    text_accuracy_score: int | None = None
+    brand_alignment_score: int | None = None
+    technical_score: int | None = None
+    visual_integrity_score: int | None = None
+    review_summary: str | None = None
     model_used: str | None
     iterations_used: int
     status: str

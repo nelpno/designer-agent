@@ -120,6 +120,9 @@ class PipelineContext:
     current_slide_index: int | None = None  # which slide this generation is for
     total_slides: int | None = None  # total slides in the carousel
 
+    # Anchor image for batch visual consistency (first-generated image used as reference)
+    anchor_image_url: str | None = None
+
     # Agent outputs (populated as pipeline progresses)
     enhanced_description: str | None = None  # enriched by Creative Director
     creative_direction: CreativeDirection | None = None

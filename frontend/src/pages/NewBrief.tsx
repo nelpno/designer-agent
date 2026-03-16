@@ -78,6 +78,8 @@ const DEFAULT_FORM: BriefFormData = {
   quantity: 1,
 }
 
+const DRAFT_KEY = 'artisan-draft-brief'
+
 /* ─── ProgressSection ─── */
 function ProgressSection({
   number,
@@ -171,8 +173,45 @@ export default function NewBrief() {
   const [error, setError] = useState<string | null>(null)
   const [brandSelected, setBrandSelected] = useState(false)
 
+  const [suggestingSlideIndex, setSuggestingSlideIndex] = useState<number | null>(null)
+
   // Progressive sections state
   const [openSection, setOpenSection] = useState(1)
+
+  // Load draft on mount
+  useEffect(() => {
+    const saved = localStorage.getItem(DRAFT_KEY)
+    if (saved) {
+      try {
+        const draft = JSON.parse(saved)
+        if (window.confirm('Você tem um rascunho salvo. Deseja restaurar?')) {
+          setForm(prev => ({ ...prev, ...draft }))
+        } else {
+          localStorage.removeItem(DRAFT_KEY)
+        }
+      } catch { localStorage.removeItem(DRAFT_KEY) }
+    }
+  }, [])
+
+  // Auto-save on form change (debounced 1s)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(form))
+    }, 1000)
+    return () => clearTimeout(timer)
+  }, [form])
+
+  // Unsaved changes warning
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      const hasContent = form.description || form.slides?.some((s: SlideData) => s.headline || s.body_text)
+      if (hasContent) {
+        e.preventDefault()
+      }
+    }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [form])
 
   useEffect(() => {
     apiClient
@@ -267,6 +306,34 @@ export default function NewBrief() {
     }
   }
 
+  async function handleSuggestSlide(slideIndex: number) {
+    if (!form.description) return
+    setSuggestingSlideIndex(slideIndex)
+    try {
+      const response = await apiClient.post('/api/briefs/suggest-texts', {
+        art_type: form.art_type || 'carousel',
+        description: form.description,
+        slide_index: slideIndex,
+        existing_slides: form.slides,
+        slide_count: form.slides.length,
+      })
+      const data = response.data
+      if (data.slides && data.slides.length > 0) {
+        const suggestion = data.slides[0]
+        const newSlides = [...form.slides]
+        newSlides[slideIndex] = {
+          headline: suggestion.headline || newSlides[slideIndex].headline,
+          body_text: suggestion.body_text || newSlides[slideIndex].body_text,
+        }
+        setField('slides', newSlides)
+      }
+    } catch (err) {
+      console.error('Failed to suggest slide text:', err)
+    } finally {
+      setSuggestingSlideIndex(null)
+    }
+  }
+
   async function handleUpload(files: FileList) {
     for (const file of Array.from(files)) {
       const formData = new FormData()
@@ -356,6 +423,9 @@ export default function NewBrief() {
         `/api/generations/from-brief/${briefId}`,
         Object.keys(genPayload).length > 0 ? genPayload : undefined
       )
+
+      // Clear draft on successful submission
+      localStorage.removeItem(DRAFT_KEY)
 
       // Handle both single and batch responses
       if (Array.isArray(genRes.data)) {
@@ -873,6 +943,8 @@ export default function NewBrief() {
                       onChange={(slides) => setField('slides', slides)}
                       onSuggestTexts={handleSuggestTexts}
                       suggesting={suggesting}
+                      onSuggestSlide={handleSuggestSlide}
+                      suggestingSlideIndex={suggestingSlideIndex}
                     />
                   ) : (
                     <TextFieldsSection

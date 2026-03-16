@@ -1,5 +1,9 @@
+import asyncio
+import base64
 import json
+import os
 import re
+from pathlib import Path
 
 from app.agents.base_agent import BaseAgent
 from app.agents.context import PipelineContext, RefinementStep
@@ -8,6 +12,8 @@ from app.providers.model_router import select_model, get_fallback_model
 
 
 SYSTEM_PROMPT = """You are a Prompt Refinement Specialist. Given an image that didn't pass quality review, analyze the issues and create an improved prompt.
+
+You are looking at the actual generated image. Describe what you SEE that needs fixing, not just what the reviewer scores say.
 
 You receive:
 - The original prompt that was used
@@ -59,11 +65,32 @@ class RefinerAgent(BaseAgent):
             {"role": "user", "content": user_prompt},
         ]
 
-        response = await self.client.chat(
-            model=settings.LLM_MODEL,
-            messages=messages,
-            temperature=0.7,
-        )
+        # Load generated image for visual analysis
+        image_base64 = None
+        if context.generated_images:
+            latest_image = context.generated_images[-1]
+            clean_url = latest_image.image_url.lstrip("/")
+            if clean_url.startswith("storage/"):
+                clean_url = clean_url[len("storage/"):]
+            image_path = os.path.realpath(os.path.join(settings.STORAGE_PATH, clean_url))
+            if image_path.startswith(os.path.realpath(settings.STORAGE_PATH)) and os.path.isfile(image_path):
+                image_bytes = await asyncio.to_thread(lambda: Path(image_path).read_bytes())
+                image_base64 = base64.b64encode(image_bytes).decode("utf-8")
+
+        if image_base64:
+            response = await self.client.chat_with_vision(
+                model=settings.LLM_MODEL,
+                messages=messages,
+                image_base64=image_base64,
+                temperature=0.7,
+                max_tokens=1024,
+            )
+        else:
+            response = await self.client.chat(
+                model=settings.LLM_MODEL,
+                messages=messages,
+                temperature=0.7,
+            )
 
         # Strip markdown code blocks if present
         text = response.strip()

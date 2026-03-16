@@ -43,6 +43,17 @@ export interface BatchInfo {
   completed: number
 }
 
+// Score breakdown
+
+export interface ScoreBreakdownData {
+  composition_score: number | null
+  text_accuracy_score: number | null
+  brand_alignment_score: number | null
+  technical_score: number | null
+  visual_integrity_score: number | null
+  review_summary: string | null
+}
+
 // Models
 
 export interface Brand {
@@ -120,6 +131,7 @@ export interface Generation {
   total_duration_ms: number | null
   batch_id?: string
   format_label?: string
+  score_breakdown?: ScoreBreakdownData | null
   created_at: string
 }
 

@@ -106,7 +106,7 @@ export const ART_TYPE_CONFIGS: Record<string, ArtTypeConfig> = {
     inclusionLabel: 'Foto do produto ou pessoa',
     allowedFormats: ['1:1'],
     defaultFormats: ['1:1'],
-    maxQuantity: 1,
+    maxQuantity: 2,
     suggestTexts: true,
     minSlides: 2,
     maxSlides: 10,

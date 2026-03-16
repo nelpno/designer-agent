@@ -82,7 +82,7 @@ ART_TYPE_CONFIG: dict[str, dict[str, Any]] = {
         "inclusionLabel": "Foto do produto ou pessoa",
         "allowedFormats": ["1:1"],
         "defaultFormats": ["1:1"],
-        "maxQuantity": 1,
+        "maxQuantity": 2,
         "suggestTexts": True,
         "minSlides": 2,
         "maxSlides": 10,

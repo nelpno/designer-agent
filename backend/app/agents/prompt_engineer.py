@@ -1,4 +1,6 @@
+import base64
 import json
+import os
 import re
 
 from app.agents.base_agent import BaseAgent
@@ -52,13 +54,25 @@ class PromptEngineerAgent(BaseAgent):
             {"role": "user", "content": user_prompt},
         ]
 
-        # Call LLM to build the optimized prompt (reduced max_tokens — output is ~300 tokens JSON)
-        response = await self.client.chat(
-            model=settings.LLM_MODEL,
-            messages=messages,
-            temperature=0.6,
-            max_tokens=1024,
-        )
+        # Load first reference image for vision analysis (PE sees what user uploaded)
+        ref_image_b64 = self._load_first_reference(context)
+
+        # Call LLM with vision if reference available, otherwise text-only
+        if ref_image_b64:
+            response = await self.client.chat_with_vision(
+                model=settings.LLM_MODEL,
+                messages=messages,
+                image_base64=ref_image_b64,
+                temperature=0.6,
+                max_tokens=1024,
+            )
+        else:
+            response = await self.client.chat(
+                model=settings.LLM_MODEL,
+                messages=messages,
+                temperature=0.6,
+                max_tokens=1024,
+            )
 
         # Strip markdown code blocks if present
         text = response.strip()
@@ -203,9 +217,12 @@ Guidelines:
             parts.append("\n## Reference Images (will be sent to the model)")
             if has_refs:
                 parts.append(f"- {len(brief.reference_urls)} reference image(s) uploaded by the user will be sent alongside your prompt")
-                parts.append("- Your prompt should instruct the model to use these references as visual inspiration for style, layout, or product appearance")
-                parts.append("- Reference images have been provided. Pay close attention to their LAYOUT, COMPOSITION, and VISUAL STRUCTURE. The generated image should follow a similar arrangement of elements, spacing, and visual hierarchy as shown in the reference images.")
-                parts.append("- Describe the composition in your prompt to mirror the reference layout: element positioning, proportions, negative space usage, and overall visual flow")
+                parts.append("- You are SEEING the first reference image right now. ANALYZE it carefully:")
+                parts.append("  - Describe its exact layout: where elements are positioned, proportions, visual hierarchy")
+                parts.append("  - Note the color palette, lighting style, and mood")
+                parts.append("  - Identify the composition pattern (centered, rule-of-thirds, split, etc.)")
+                parts.append("  - Your prompt MUST reproduce this exact layout and style")
+                parts.append("- Reference images will also be sent to the image model directly")
             if has_logo:
                 parts.append("- The brand logo will be sent as a reference image")
                 parts.append("- Your prompt should instruct the model to incorporate the logo naturally in the design")
@@ -230,8 +247,21 @@ Guidelines:
 
             parts.append(f"\n## Carousel Slide {slide_num} of {total}")
             parts.append(f"- This is slide {slide_num} of {total} in a carousel post")
-            parts.append("- Maintain visual coherence with other slides: SAME background treatment, layout grid, color palette, and typography style")
-            parts.append("- Each slide should feel like part of a unified set while having its own unique content")
+
+            # Use shared visual template if available (ensures all slides look identical)
+            carousel_template = None
+            if context.shared_creative_direction:
+                carousel_template = context.shared_creative_direction.get("carousel_visual_template")
+
+            if carousel_template:
+                parts.append("\n## MANDATORY Visual Template (follow EXACTLY for every slide)")
+                parts.append("The following visual template was designed for this carousel. Your prompt MUST reproduce this EXACT layout, background, typography, and decoration style. Do NOT deviate.")
+                parts.append(carousel_template)
+                parts.append("\n- Only the headline text, body text, and specific imagery content should change between slides. ALL other visual elements (background, layout, frame, decorations, typography style, logo position) must remain IDENTICAL.")
+            else:
+                parts.append("- Maintain visual coherence with other slides: SAME background treatment, layout grid, color palette, and typography style")
+                parts.append("- Each slide should feel like part of a unified set while having its own unique content")
+
             if slide_headline:
                 parts.append(f'- Headline (MUST appear in image exactly as): "{slide_headline}"')
             if slide_body:
@@ -250,9 +280,43 @@ Guidelines:
                 if slide_body:
                     parts.append(f'  - Body: "{slide_body}"')
 
+        # Multi-format batch visual template (non-carousel)
+        if context.current_slide_index is None and context.shared_creative_direction:
+            batch_template = context.shared_creative_direction.get("batch_visual_template")
+            if batch_template:
+                parts.append("\n## MANDATORY Visual Style (follow EXACTLY across all format variations)")
+                parts.append("The following visual style was designed for this batch. Your prompt MUST use the EXACT same colors, imagery style, decorations, and typography described below. Adapt the LAYOUT to fit the aspect ratio, but keep the visual identity identical.")
+                parts.append(batch_template)
+
+        # Anchor image instruction (first-image-as-reference for batch consistency)
+        if context.anchor_image_url:
+            parts.append("\n## CRITICAL: Visual Style Anchor")
+            parts.append("- An anchor image from this batch is sent as the FIRST reference image.")
+            parts.append("- You MUST match its EXACT visual style: same background, color treatment, decoration style, typography style, frame/border treatment.")
+            parts.append("- Only the specific content (text, subject) should change. All other visual elements must be identical.")
+
         parts.append(f"\nProduce the best possible prompt for {selected_model}, following the format rules in your system instructions.")
 
         return "\n".join(parts)
+
+    def _load_first_reference(self, context: PipelineContext) -> str | None:
+        """Load the first reference image as base64 for vision analysis."""
+        refs = context.brief.reference_urls or []
+        if not refs:
+            return None
+        settings = get_settings()
+        storage_root = os.path.realpath(settings.STORAGE_PATH)
+        try:
+            clean = refs[0].lstrip("/")
+            if clean.startswith("storage/"):
+                clean = clean[len("storage/"):]
+            path = os.path.realpath(os.path.join(storage_root, clean))
+            if not path.startswith(storage_root) or not os.path.isfile(path):
+                return None
+            with open(path, "rb") as f:
+                return base64.b64encode(f.read()).decode("utf-8")
+        except Exception:
+            return None
 
     def _get_completion_reasoning(self, context: PipelineContext) -> str:
         gp = context.generation_prompt

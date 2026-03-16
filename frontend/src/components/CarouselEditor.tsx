@@ -6,6 +6,8 @@ interface CarouselEditorProps {
   onChange: (slides: SlideData[]) => void
   onSuggestTexts?: () => void
   suggesting?: boolean
+  suggestingSlideIndex?: number | null
+  onSuggestSlide?: (slideIndex: number) => void
 }
 
 export default function CarouselEditor({
@@ -13,6 +15,8 @@ export default function CarouselEditor({
   onChange,
   onSuggestTexts,
   suggesting = false,
+  suggestingSlideIndex = null,
+  onSuggestSlide,
 }: CarouselEditorProps) {
   const canAdd = slides.length < LIMITS.MAX_SLIDES
   const canRemove = slides.length > LIMITS.MIN_SLIDES
@@ -74,12 +78,24 @@ export default function CarouselEditor({
           className="artisan-card p-4 space-y-3"
         >
           <div className="flex items-center justify-between">
-            <span
-              className="text-xs font-semibold uppercase tracking-wide"
-              style={{ color: 'var(--text-tertiary)', fontFamily: 'var(--font-heading)' }}
-            >
-              Slide {index + 1}
-            </span>
+            <div className="flex items-center gap-2">
+              <span
+                className="text-xs font-semibold uppercase tracking-wide"
+                style={{ color: 'var(--text-tertiary)', fontFamily: 'var(--font-heading)' }}
+              >
+                Slide {index + 1}
+              </span>
+              {onSuggestSlide && (
+                <button
+                  type="button"
+                  className="btn-ghost text-xs"
+                  onClick={() => onSuggestSlide(index)}
+                  disabled={suggestingSlideIndex === index}
+                >
+                  {suggestingSlideIndex === index ? 'Sugerindo...' : 'Sugerir'}
+                </button>
+              )}
+            </div>
             <div className="flex items-center gap-1">
               {/* Move up */}
               <button

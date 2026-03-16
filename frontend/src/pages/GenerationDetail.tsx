@@ -5,6 +5,7 @@ import { Generation, GeneratedImage, GenerationStatus, PipelineLog } from '../ty
 import StatusBadge from '../components/StatusBadge'
 import ModelBadge from '../components/ModelBadge'
 import BatchProgress from '../components/BatchProgress'
+import ScoreBreakdown from '../components/ScoreBreakdown'
 
 function formatAgentName(name?: string): string {
   if (!name) return ''
@@ -205,6 +206,8 @@ export default function GenerationDetail() {
   const [retrying, setRetrying] = useState(false)
   const [selectedImage, setSelectedImage] = useState(0)
   const [batchGenerations, setBatchGenerations] = useState<Generation[]>([])
+  const [showRetryEdit, setShowRetryEdit] = useState(false)
+  const [retryDescription, setRetryDescription] = useState('')
   const wsRef = useRef<WebSocket | null>(null)
   const wsConnectedRef = useRef(false)
 
@@ -322,6 +325,23 @@ export default function GenerationDetail() {
     }
   }
 
+  async function handleRetryWithEdit() {
+    if (!generation) return
+    try {
+      setRetrying(true)
+      await apiClient.post(`/api/generations/${generation.id}/retry-edit`, {
+        description: retryDescription || undefined,
+      })
+      setShowRetryEdit(false)
+      globalThis.location.reload()
+    } catch (err) {
+      console.error('Retry with edit failed:', err)
+      setError('Falha ao re-gerar com ajuste')
+    } finally {
+      setRetrying(false)
+    }
+  }
+
   const pipelineContext = generation?.pipeline_context ?? undefined
   const currentImage = images[selectedImage]
   const finalImage = images.find((img) => img.is_final) ?? images[0]
@@ -404,6 +424,22 @@ export default function GenerationDetail() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                 </svg>
                 Download
+              </button>
+            )}
+            {generation.status === GenerationStatus.COMPLETED && (
+              <button
+                type="button"
+                onClick={() => {
+                  const desc = (generation.pipeline_context?.brief as Record<string, unknown>)?.description as string || ''
+                  setRetryDescription(desc)
+                  setShowRetryEdit(true)
+                }}
+                className="btn-secondary flex items-center gap-2 text-sm"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                Re-gerar com ajuste
               </button>
             )}
             {generation.status === GenerationStatus.COMPLETED && generation.brief_id && (
@@ -655,7 +691,7 @@ export default function GenerationDetail() {
                 )}
                 {generation.final_score != null && (
                   <div
-                    className="flex items-center justify-between rounded-xl px-3 py-2.5 -mx-1"
+                    className="rounded-xl px-3 py-2.5 -mx-1"
                     style={{
                       background: generation.final_score >= 75
                         ? 'rgba(48, 209, 88, 0.06)'
@@ -669,16 +705,30 @@ export default function GenerationDetail() {
                         : '0 0 20px rgba(255, 69, 58, 0.08)',
                     }}
                   >
-                    <dt className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Score</dt>
-                    <dd className="text-xl font-bold" style={{
-                      fontFamily: 'var(--font-heading)',
-                      color: generation.final_score >= 75
-                        ? '#30D158'
-                        : generation.final_score >= 50
-                        ? '#FFD60A'
-                        : '#FF453A',
-                    }}>
-                      {generation.final_score.toFixed(0)}
+                    <dt className="text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>Score</dt>
+                    <dd>
+                      <ScoreBreakdown
+                        overall={generation.final_score}
+                        composition={generation.score_breakdown?.composition_score ?? null}
+                        textAccuracy={generation.score_breakdown?.text_accuracy_score ?? null}
+                        brandAlignment={generation.score_breakdown?.brand_alignment_score ?? null}
+                        technical={generation.score_breakdown?.technical_score ?? null}
+                        visualIntegrity={generation.score_breakdown?.visual_integrity_score ?? null}
+                        summary={generation.score_breakdown?.review_summary ?? null}
+                      />
+                      {/* Fallback: show just the number if no breakdown data */}
+                      {!generation.score_breakdown && (
+                        <span className="text-xl font-bold" style={{
+                          fontFamily: 'var(--font-heading)',
+                          color: generation.final_score >= 75
+                            ? '#30D158'
+                            : generation.final_score >= 50
+                            ? '#FFD60A'
+                            : '#FF453A',
+                        }}>
+                          {generation.final_score.toFixed(0)}
+                        </span>
+                      )}
                     </dd>
                   </div>
                 )}

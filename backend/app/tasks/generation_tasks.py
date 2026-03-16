@@ -80,6 +80,13 @@ async def _run_pipeline_async(generation_id: str, context_dict: dict, task):
                 generation.status = "completed" if context.current_status == "completed" else "failed"
                 generation.pipeline_context = context.to_dict()
                 generation.final_score = context.review.overall_score if context.review else None
+                if context.review:
+                    generation.composition_score = context.review.composition_score
+                    generation.text_accuracy_score = context.review.text_accuracy_score
+                    generation.brand_alignment_score = context.review.brand_alignment_score
+                    generation.technical_score = context.review.technical_score
+                    generation.visual_integrity_score = context.review.visual_integrity_score
+                    generation.review_summary = context.review.summary
                 generation.model_used = context.generation_prompt.selected_model if context.generation_prompt else None
                 generation.iterations_used = context.iteration + 1
                 if context.generated_images:

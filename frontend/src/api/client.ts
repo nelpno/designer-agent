@@ -60,3 +60,75 @@ export async function fetchArtTypeConfig(): Promise<Record<string, ArtTypeConfig
   const response = await apiClient.get<Record<string, ArtTypeConfig>>('/api/config/art-types')
   return response.data
 }
+
+/**
+ * Busca galeria com filtros server-side.
+ */
+export interface GalleryFilters {
+  status?: string
+  art_type?: string
+  model_used?: string
+  min_score?: number
+  search?: string
+  skip?: number
+  limit?: number
+}
+
+export async function fetchGallery(filters: GalleryFilters = {}): Promise<any[]> {
+  const params = new URLSearchParams()
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== undefined && value !== '') params.set(key, String(value))
+  })
+  const response = await apiClient.get(`/api/gallery?${params.toString()}`)
+  return response.data
+}
+
+/**
+ * Retry com edição de descrição.
+ */
+export async function retryWithEdit(generationId: string, description?: string): Promise<any> {
+  const response = await apiClient.post(`/api/generations/${generationId}/retry-edit`, {
+    description: description || undefined,
+  })
+  return response.data
+}
+
+/**
+ * Download ZIP de um batch inteiro.
+ */
+export async function downloadBatchZip(batchId: string): Promise<void> {
+  const response = await apiClient.get(`/api/generations/batch/${batchId}/download`, {
+    responseType: 'blob',
+  })
+  const url = globalThis.URL.createObjectURL(new Blob([response.data]))
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `batch-${batchId.slice(0, 8)}.zip`
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  globalThis.URL.revokeObjectURL(url)
+}
+
+/**
+ * Sugestão de texto para um slide específico do carrossel.
+ */
+export async function suggestSlideText(
+  artType: string,
+  description: string,
+  slideIndex: number,
+  existingSlides: Array<{ headline: string; body_text: string }>
+): Promise<{ headline: string; body_text: string } | null> {
+  const response = await apiClient.post('/api/briefs/suggest-texts', {
+    art_type: artType,
+    description,
+    slide_index: slideIndex,
+    existing_slides: existingSlides,
+    slide_count: existingSlides.length,
+  })
+  const data = response.data
+  if (data.slides && data.slides.length > 0) {
+    return data.slides[0]
+  }
+  return null
+}

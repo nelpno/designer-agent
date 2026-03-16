@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, case
+from sqlalchemy import cast, select, func, case, String
 from app.database import get_session
 from app.models.generation import Generation
 
@@ -13,11 +13,14 @@ async def get_gallery(
     art_type: str | None = None,
     model_used: str | None = None,
     min_score: int | None = None,
+    status: str | None = None,
+    search: str | None = None,
     session: AsyncSession = Depends(get_session)
 ):
     """Get all completed generations with final images for the gallery."""
+    effective_status = status or "completed"
     query = select(Generation).where(
-        Generation.status == "completed",
+        Generation.status == effective_status,
         Generation.final_image_url.isnot(None)
     )
 
@@ -27,6 +30,10 @@ async def get_gallery(
         query = query.where(Generation.model_used == model_used)
     if min_score:
         query = query.where(Generation.final_score >= min_score)
+    if search:
+        query = query.where(
+            cast(Generation.pipeline_context, String).ilike(f"%{search}%")
+        )
 
     query = query.order_by(Generation.created_at.desc()).offset(skip).limit(limit)
     result = await session.execute(query)

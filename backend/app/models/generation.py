@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import JSON, TEXT, VARCHAR, Boolean, DateTime, ForeignKey, Integer, func
+from sqlalchemy import JSON, TEXT, VARCHAR, Boolean, DateTime, ForeignKey, Integer, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -27,6 +27,12 @@ class Generation(Base):
     pipeline_context: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     final_image_url: Mapped[str | None] = mapped_column(TEXT, nullable=True)
     final_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    composition_score: Mapped[int | None] = mapped_column(nullable=True)
+    text_accuracy_score: Mapped[int | None] = mapped_column(nullable=True)
+    brand_alignment_score: Mapped[int | None] = mapped_column(nullable=True)
+    technical_score: Mapped[int | None] = mapped_column(nullable=True)
+    visual_integrity_score: Mapped[int | None] = mapped_column(nullable=True)
+    review_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
     model_used: Mapped[str | None] = mapped_column(VARCHAR(100), nullable=True)
     iterations_used: Mapped[int] = mapped_column(Integer, nullable=False, server_default="1")
     status: Mapped[str] = mapped_column(VARCHAR(20), nullable=False, server_default="pending")

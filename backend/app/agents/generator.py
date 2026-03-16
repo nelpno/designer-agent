@@ -129,6 +129,18 @@ class GeneratorAgent(BaseAgent):
         # Combine all images for the model (reference + inclusion)
         all_images = reference_images + inclusion_images
 
+        # Load anchor image if available (for batch visual consistency)
+        if context.anchor_image_url:
+            anchor_b64 = self._load_single_image(context.anchor_image_url)
+            if anchor_b64:
+                # Insert anchor FIRST so model sees it as primary reference
+                all_images.insert(0, anchor_b64)
+                context.log_decision(
+                    agent_name=self.name,
+                    decision="Loaded anchor image for batch consistency",
+                    reasoning="First-generated image used as visual reference to maintain consistency across batch",
+                )
+
         # Try primary model
         try:
             image_bytes = await self.client.generate_image(
@@ -192,6 +204,20 @@ class GeneratorAgent(BaseAgent):
         context.generated_images.append(generated_image)
 
         return context
+
+    def _load_single_image(self, url: str) -> str | None:
+        """Load a single image from storage as base64."""
+        settings = get_settings()
+        clean = url.lstrip("/")
+        if clean.startswith("storage/"):
+            clean = clean[len("storage/"):]
+        path = os.path.realpath(os.path.join(settings.STORAGE_PATH, clean))
+        if not path.startswith(os.path.realpath(settings.STORAGE_PATH)):
+            return None
+        if not os.path.isfile(path):
+            return None
+        with open(path, "rb") as f:
+            return base64.b64encode(f.read()).decode("utf-8")
 
     def _get_completion_reasoning(self, context: PipelineContext) -> str:
         if context.generated_images:
