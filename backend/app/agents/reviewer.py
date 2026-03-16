@@ -58,6 +58,18 @@ A hard_reject means the image CANNOT be sent to a client regardless of other sco
 Always output valid JSON only, no markdown."""
 
 
+COMPOSITION_REVIEW_ADDENDUM = """
+
+IMPORTANT: Text and logo in this image were overlaid PROGRAMMATICALLY (not AI-generated).
+For text_accuracy_score, evaluate:
+- Legibility (contrast between text and background)
+- Harmonious positioning within the composition
+- Adequate visual hierarchy
+Do NOT penalize for text rendering artifacts (there are none with programmatic composition).
+Focus on: did the background image leave adequate space? Is the overall piece visually professional?
+"""
+
+
 class ReviewerAgent(BaseAgent):
     name = "reviewer"
 
@@ -77,8 +89,14 @@ class ReviewerAgent(BaseAgent):
         # Build user prompt with brief, brand, and generation context
         user_prompt = self._build_user_prompt(context)
 
+        # Local copy of system prompt — conditionally append composition addendum
+        system_prompt = SYSTEM_PROMPT
+        composition_layout = getattr(context.creative_direction, "composition_layout", None)
+        if composition_layout and composition_layout.use_compositor:
+            system_prompt += COMPOSITION_REVIEW_ADDENDUM
+
         messages = [
-            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
         ]
 
