@@ -37,18 +37,18 @@ class BrandGuidelines:
 
 @dataclass
 class TextZone:
-    field: str          # "headline" | "body_text" | "cta_text" | "slide_headline" | "slide_body"
-    region: str         # "top" | "center" | "bottom"
-    alignment: str      # "left" | "center" | "right"
-    size_hint: str      # "large" | "medium" | "small"
-    style: str          # "bold" | "semibold" | "medium" | "regular" | "light"
-    color_hint: str     # "light" | "dark" | "auto"
+    field: str = "headline"
+    region: str = "center"         # "top" | "center" | "bottom"
+    alignment: str = "center"      # "left" | "center" | "right"
+    size_hint: str = "medium"      # "large" | "medium" | "small"
+    style: str = "regular"         # "bold" | "semibold" | "medium" | "regular" | "light"
+    color_hint: str = "auto"       # "light" | "dark" | "auto"
 
 
 @dataclass
 class LogoPlacement:
-    position: str       # "top-left", "top-center", "top-right", "center-left", etc.
-    size: str           # "small" | "medium" | "large"
+    position: str = "top-left"     # grid 3x3
+    size: str = "small"            # "small" | "medium" | "large"
     opacity: float = 1.0
 
 
@@ -86,9 +86,11 @@ class CreativeDirection:
         cl_data = filtered.pop("composition_layout", None)
         composition_layout = None
         if cl_data and isinstance(cl_data, dict):
-            text_zones = [TextZone(**tz) for tz in cl_data.get("text_zones", [])]
+            tz_fields = {f.name for f in fields(TextZone)}
+            lp_fields = {f.name for f in fields(LogoPlacement)}
+            text_zones = [TextZone(**{k: v for k, v in tz.items() if k in tz_fields}) for tz in cl_data.get("text_zones", []) if isinstance(tz, dict)]
             lp_data = cl_data.get("logo_placement")
-            logo_placement = LogoPlacement(**lp_data) if lp_data else None
+            logo_placement = LogoPlacement(**{k: v for k, v in lp_data.items() if k in lp_fields}) if isinstance(lp_data, dict) else None
             composition_layout = CompositionLayout(
                 use_compositor=cl_data.get("use_compositor", False),
                 text_zones=text_zones,

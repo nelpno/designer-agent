@@ -150,17 +150,26 @@ Guidelines:
         # Parse composition_layout if present (programmatic composition)
         composition_layout = None
         if use_composition and "composition_layout" in direction_data:
+            from dataclasses import fields as dc_fields
             from app.agents.context import CompositionLayout, TextZone, LogoPlacement
-            cl = direction_data["composition_layout"]
-            text_zones = [TextZone(**tz) for tz in cl.get("text_zones", [])]
-            lp = cl.get("logo_placement")
-            logo_placement = LogoPlacement(**lp) if lp else None
-            composition_layout = CompositionLayout(
-                use_compositor=cl.get("use_compositor", False),
-                text_zones=text_zones,
-                logo_placement=logo_placement,
-                reserved_areas=cl.get("reserved_areas", []),
-            )
+            try:
+                cl = direction_data["composition_layout"]
+                if isinstance(cl, dict):
+                    tz_fields = {f.name for f in dc_fields(TextZone)}
+                    lp_fields = {f.name for f in dc_fields(LogoPlacement)}
+                    text_zones = [TextZone(**{k: v for k, v in tz.items() if k in tz_fields}) for tz in cl.get("text_zones", []) if isinstance(tz, dict)]
+                    lp = cl.get("logo_placement")
+                    logo_placement = LogoPlacement(**{k: v for k, v in lp.items() if k in lp_fields}) if isinstance(lp, dict) else None
+                    composition_layout = CompositionLayout(
+                        use_compositor=cl.get("use_compositor", False),
+                        text_zones=text_zones,
+                        logo_placement=logo_placement,
+                        reserved_areas=cl.get("reserved_areas", []),
+                    )
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning(f"Failed to parse composition_layout from CD: {e}")
+                composition_layout = None
         context.creative_direction.composition_layout = composition_layout
 
         # Store enhanced description for downstream agents
