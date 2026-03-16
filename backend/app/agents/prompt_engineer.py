@@ -31,6 +31,10 @@ class PromptEngineerAgent(BaseAgent):
         art_type = creative_direction.selected_art_type
         has_significant_text = creative_direction.has_significant_text
 
+        # Check if compositor is active
+        composition_layout = getattr(creative_direction, "composition_layout", None)
+        use_compositor = composition_layout and composition_layout.use_compositor
+
         # Select model and format config
         selected_model = select_model(art_type, has_significant_text)
         format_config = get_format_config(
@@ -47,7 +51,22 @@ class PromptEngineerAgent(BaseAgent):
         else:
             system_prompt = self._generic_system_prompt()
 
-        user_prompt = self._build_user_prompt(context, selected_model)
+        # Build reserved zone instructions for compositor
+        reserved_zone_instructions = ""
+        if use_compositor:
+            zone_lines = [
+                "\n\nCRITICAL COMPOSITION RULES:",
+                "- DO NOT include any text, words, letters, numbers, or typography in the image",
+                "- The image must be a pure visual/background — all text will be added programmatically after generation",
+            ]
+            for area in composition_layout.reserved_areas:
+                zone_lines.append(f"- Leave space: {area}")
+            if composition_layout.logo_placement:
+                zone_lines.append(f"- Reserve the {composition_layout.logo_placement.position} area for a small logo placement")
+            reserved_zone_instructions = "\n".join(zone_lines)
+
+        user_prompt = self._build_user_prompt(context, selected_model, use_compositor=use_compositor)
+        user_prompt += reserved_zone_instructions
 
         messages = [
             {"role": "system", "content": system_prompt},
@@ -155,7 +174,7 @@ Guidelines:
 - Use HEX color codes, not color names
 - Output valid JSON only, no markdown."""
 
-    def _build_user_prompt(self, context: PipelineContext, selected_model: str) -> str:
+    def _build_user_prompt(self, context: PipelineContext, selected_model: str, use_compositor: bool = False) -> str:
         brief = context.brief
         creative_direction = context.creative_direction
         brand = context.brand
@@ -173,12 +192,14 @@ Guidelines:
 
         if brief.platform:
             parts.append(f"- Platform: {brief.platform}")
-        if brief.headline:
-            parts.append(f'- Headline (MUST appear in image exactly as): "{brief.headline}"')
-        if brief.body_text:
-            parts.append(f'- Body Text (MUST appear in image exactly as): "{brief.body_text}"')
-        if brief.cta_text:
-            parts.append(f'- CTA (MUST appear in image exactly as): "{brief.cta_text}"')
+        # When compositor is active, don't tell the model to render text
+        if not use_compositor:
+            if brief.headline:
+                parts.append(f'- Headline (MUST appear in image exactly as): "{brief.headline}"')
+            if brief.body_text:
+                parts.append(f'- Body Text (MUST appear in image exactly as): "{brief.body_text}"')
+            if brief.cta_text:
+                parts.append(f'- CTA (MUST appear in image exactly as): "{brief.cta_text}"')
         if description:
             parts.append(f"- Description: {description}")
 
@@ -262,10 +283,11 @@ Guidelines:
                 parts.append("- Maintain visual coherence with other slides: SAME background treatment, layout grid, color palette, and typography style")
                 parts.append("- Each slide should feel like part of a unified set while having its own unique content")
 
-            if slide_headline:
-                parts.append(f'- Headline (MUST appear in image exactly as): "{slide_headline}"')
-            if slide_body:
-                parts.append(f'- Body Text (MUST appear in image exactly as): "{slide_body}"')
+            if not use_compositor:
+                if slide_headline:
+                    parts.append(f'- Headline (MUST appear in image exactly as): "{slide_headline}"')
+                if slide_body:
+                    parts.append(f'- Body Text (MUST appear in image exactly as): "{slide_body}"')
         elif brief.slides:
             # Legacy mode: all slides in one generation
             parts.append(f"\n## Carousel — {len(brief.slides)} Slides")
