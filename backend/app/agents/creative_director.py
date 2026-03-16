@@ -6,6 +6,72 @@ from app.agents.context import PipelineContext, CreativeDirection
 from app.config import get_settings
 
 
+COMPOSITION_PROMPT_ADDENDUM = """
+
+ADDITIONAL OUTPUT — Programmatic Composition Layout:
+This art type uses PROGRAMMATIC text/logo composition. The AI model will generate a clean background image, and text + logo will be overlaid programmatically afterward.
+
+You MUST include an additional field "composition_layout" in your JSON output:
+{
+    "composition_layout": {
+        "use_compositor": true,
+        "text_zones": [
+            {
+                "field": "headline",
+                "region": "top",
+                "alignment": "center",
+                "size_hint": "large",
+                "style": "bold",
+                "color_hint": "light"
+            },
+            {
+                "field": "body_text",
+                "region": "center",
+                "alignment": "left",
+                "size_hint": "medium",
+                "style": "regular",
+                "color_hint": "light"
+            },
+            {
+                "field": "cta_text",
+                "region": "bottom",
+                "alignment": "center",
+                "size_hint": "medium",
+                "style": "bold",
+                "color_hint": "light"
+            }
+        ],
+        "logo_placement": {
+            "position": "bottom-right",
+            "size": "small",
+            "opacity": 1.0
+        },
+        "reserved_areas": [
+            "top 25% for headline text",
+            "bottom 15% for CTA and logo"
+        ]
+    }
+}
+
+Rules for composition_layout fields:
+- use_compositor: always true when this addendum is active
+- text_zones: one entry per text field present in the brief (headline, body_text, cta_text, or slide_headline/slide_body for carousels)
+  - field: must match the brief field name exactly
+  - region: "top" | "center" | "bottom" — vertical zone where text should be placed
+  - alignment: "left" | "center" | "right" — horizontal text alignment
+  - size_hint: "large" (headlines, CTAs) | "medium" (body text) | "small" (fine print, disclaimers)
+  - style: "bold" | "semibold" | "medium" | "regular" | "light" — font weight
+  - color_hint: "light" (for dark backgrounds) | "dark" (for light backgrounds) | "auto" (let compositor decide)
+- logo_placement: where the brand logo should go (null if no brand logo)
+  - position: "top-left" | "top-center" | "top-right" | "center-left" | "center" | "center-right" | "bottom-left" | "bottom-center" | "bottom-right"
+  - size: "small" | "medium" | "large"
+  - opacity: 0.0 to 1.0 (default 1.0)
+- reserved_areas: list of natural language descriptions of areas the background image should keep clean/simple for text overlay (e.g., "top 25% for headline text")
+
+Think about visual hierarchy: headline gets more space, CTA should be prominent, body text fits in between.
+Consider the background: if dark mood, use color_hint "light" for text; if bright/light mood, use "dark"."""
+
+
 class CreativeDirectorAgent(BaseAgent):
     name = "creative_director"
 
@@ -40,6 +106,13 @@ Guidelines:
 - Be bold and specific, never generic. "Clean and modern" is too vague. "Swiss-style grid layout with 60% negative space and accent color used only on CTA" is specific.
 - Output valid JSON only, no markdown."""
 
+        # Check if this art type uses programmatic composition
+        from app.config.art_type_config import get_art_type_config
+        art_type_config = get_art_type_config(context.brief.art_type)
+        use_composition = art_type_config and art_type_config.get("programmaticComposition", False)
+        if use_composition:
+            system_prompt += COMPOSITION_PROMPT_ADDENDUM
+
         # Build the user prompt with brief details
         user_prompt = self._build_user_prompt(context)
 
@@ -73,6 +146,22 @@ Guidelines:
             selected_art_type=direction_data["selected_art_type"],
             has_significant_text=direction_data.get("has_significant_text", False),
         )
+
+        # Parse composition_layout if present (programmatic composition)
+        composition_layout = None
+        if use_composition and "composition_layout" in direction_data:
+            from app.agents.context import CompositionLayout, TextZone, LogoPlacement
+            cl = direction_data["composition_layout"]
+            text_zones = [TextZone(**tz) for tz in cl.get("text_zones", [])]
+            lp = cl.get("logo_placement")
+            logo_placement = LogoPlacement(**lp) if lp else None
+            composition_layout = CompositionLayout(
+                use_compositor=cl.get("use_compositor", False),
+                text_zones=text_zones,
+                logo_placement=logo_placement,
+                reserved_areas=cl.get("reserved_areas", []),
+            )
+        context.creative_direction.composition_layout = composition_layout
 
         # Store enhanced description for downstream agents
         if direction_data.get("enhanced_description"):
