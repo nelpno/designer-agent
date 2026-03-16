@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from datetime import datetime, timezone
 from typing import Any
 
@@ -36,6 +36,31 @@ class BrandGuidelines:
 
 
 @dataclass
+class TextZone:
+    field: str          # "headline" | "body_text" | "cta_text" | "slide_headline" | "slide_body"
+    region: str         # "top" | "center" | "bottom"
+    alignment: str      # "left" | "center" | "right"
+    size_hint: str      # "large" | "medium" | "small"
+    style: str          # "bold" | "semibold" | "medium" | "regular" | "light"
+    color_hint: str     # "light" | "dark" | "auto"
+
+
+@dataclass
+class LogoPlacement:
+    position: str       # "top-left", "top-center", "top-right", "center-left", etc.
+    size: str           # "small" | "medium" | "large"
+    opacity: float = 1.0
+
+
+@dataclass
+class CompositionLayout:
+    use_compositor: bool
+    text_zones: list[TextZone]
+    logo_placement: LogoPlacement | None
+    reserved_areas: list[str]
+
+
+@dataclass
 class CreativeDirection:
     """Output of Creative Director Agent."""
     mood: str
@@ -46,6 +71,34 @@ class CreativeDirection:
     typography_direction: str | None = None
     reference_analysis: str | None = None
     has_significant_text: bool = False  # determines model routing
+    composition_layout: CompositionLayout | None = None
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "CreativeDirection":
+        """Reconstruct CreativeDirection from dict, handling nested dataclasses."""
+        filtered = {}
+        valid_fields = {f.name for f in fields(cls)}
+        for k, v in data.items():
+            if k in valid_fields:
+                filtered[k] = v
+
+        # Reconstruct nested CompositionLayout
+        cl_data = filtered.pop("composition_layout", None)
+        composition_layout = None
+        if cl_data and isinstance(cl_data, dict):
+            text_zones = [TextZone(**tz) for tz in cl_data.get("text_zones", [])]
+            lp_data = cl_data.get("logo_placement")
+            logo_placement = LogoPlacement(**lp_data) if lp_data else None
+            composition_layout = CompositionLayout(
+                use_compositor=cl_data.get("use_compositor", False),
+                text_zones=text_zones,
+                logo_placement=logo_placement,
+                reserved_areas=cl_data.get("reserved_areas", []),
+            )
+        elif isinstance(cl_data, CompositionLayout):
+            composition_layout = cl_data
+
+        return cls(**filtered, composition_layout=composition_layout)
 
 
 @dataclass
@@ -169,7 +222,7 @@ class PipelineContext:
         if data.get("brand"):
             data["brand"] = BrandGuidelines(**_ff(BrandGuidelines, data["brand"]))
         if data.get("creative_direction"):
-            data["creative_direction"] = CreativeDirection(**_ff(CreativeDirection, data["creative_direction"]))
+            data["creative_direction"] = CreativeDirection.from_dict(data["creative_direction"])
         if data.get("generation_prompt"):
             data["generation_prompt"] = GenerationPrompt(**_ff(GenerationPrompt, data["generation_prompt"]))
         data["generated_images"] = [GeneratedImage(**_ff(GeneratedImage, img)) for img in data.get("generated_images", [])]
