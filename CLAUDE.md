@@ -1,6 +1,6 @@
 # Artisan
 
-## Status: Em produção (v2.0) — 68 commits
+## Status: Em produção (v2.0) — 74 commits
 
 ## URLs
 - **Frontend**: http://82.29.60.220:8086 (direto)
@@ -200,6 +200,8 @@ frontend/src/
 - Variáveis de `execute()` não existem em métodos privados da mesma classe — passar como parâmetro ou re-derivar de context
 - Modelos de imagem (Gemini, FLUX) ignoram instruções "não gere texto" — composição programática de texto sobre imagem gerada por IA não funciona com abordagem de zonas reservadas
 - Docker containers mudam de ID após restart — consultar container ID fresco via Portainer API antes de ler logs
+- BUG PENDENTE: botão "Re-gerar com ajuste" no frontend não funciona (clica e nada acontece) — investigar se o POST para `/api/generations/{id}/retry-edit` está sendo disparado
+- Geração via API: `POST /api/briefs` + `POST /api/generations/from-brief/{id}` com `{"formats":["1:1","9:16"],"quantity":1}` — útil para injetar briefs de planos de conteúdo
 
 ## Credenciais (NÃO committar)
 - OpenRouter API Key: nas env vars da stack Portainer (NUNCA no .env.example ou código)
