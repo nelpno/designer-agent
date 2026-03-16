@@ -179,10 +179,11 @@ async def _wait_for_anchor_image(
     deadline = _asyncio.get_event_loop().time() + timeout_seconds
     while _asyncio.get_event_loop().time() < deadline:
         await _asyncio.sleep(2)
-        # Expire cached state so next query gets fresh data
-        session.expire_all()
+        # Force fresh data from DB (populate_existing overrides cached state)
         result = await session.execute(
-            select(Generation).where(Generation.id == generation_id)
+            select(Generation)
+            .where(Generation.id == generation_id)
+            .execution_options(populate_existing=True)
         )
         gen = result.scalar_one_or_none()
         if gen and gen.status == "completed" and gen.final_image_url:
