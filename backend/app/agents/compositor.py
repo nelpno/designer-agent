@@ -19,7 +19,7 @@ from app.agents.context import (
     TextZone,
 )
 from app.config import get_settings
-from app.services.storage_service import save_image
+from app.services.storage_service import save_image, save_thumbnail
 
 logger = logging.getLogger(__name__)
 
@@ -65,12 +65,12 @@ def _resolve_font_path(brand_fonts: dict | None, zone: TextZone) -> str:
 
 def _calculate_luminance(image: Image.Image, region_box: tuple[int, int, int, int]) -> float:
     """Calculate average luminance of a region in the image."""
+    from PIL import ImageStat
+
     region = image.crop(region_box).convert("RGB")
-    pixels = list(region.getdata())
-    if not pixels:
-        return 128.0
-    total = sum(0.299 * r + 0.587 * g + 0.114 * b for r, g, b in pixels)
-    return total / len(pixels)
+    stat = ImageStat.Stat(region)
+    r, g, b = stat.mean
+    return 0.299 * r + 0.587 * g + 0.114 * b
 
 
 def _contrast_ratio(l1: float, l2: float) -> float:
@@ -207,7 +207,7 @@ class CompositorAgent(BaseAgent):
 
     def _sharpen(self, image: Image.Image) -> Image.Image:
         """Apply a light sharpen to crisp up the base image before overlay."""
-        return image.filter(ImageFilter.SHARPEN)
+        return image.filter(ImageFilter.UnsharpMask(radius=1.5, percent=30, threshold=3))
 
     def _compose_text(
         self,
@@ -418,6 +418,17 @@ class CompositorAgent(BaseAgent):
                 filename=f"composed_iter{context.iteration}.png",
                 brand_id=brand_id,
             )
+
+            # After saving composed image, regenerate thumbnail
+            try:
+                await save_thumbnail(
+                    image_data=image_bytes,
+                    generation_id=storage_id,
+                    brand_id=brand_id,
+                )
+            except Exception:
+                pass  # Thumbnail update is non-critical
+
             return composed_url
 
         except Exception as e:
